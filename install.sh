@@ -43,13 +43,6 @@ for rel in bin/codex-watch bin/codex-notifier bin/codex-notify-hook bin/codex-st
   chmod +x "$INSTALL_DIR/$(basename "$rel")"
 done
 
-# Optional: render a custom SVG into per-state menu-bar icons. Set
-# CODEX_STATUS_ICON_SVG=/path/to/icon.svg to (re)generate them on install.
-# Already-rendered icon-*.png in the install dir are preserved across re-runs.
-if [ -n "${CODEX_STATUS_ICON_SVG:-}" ] && [ -f "$CODEX_STATUS_ICON_SVG" ]; then
-  sh "$REPO_DIR/tools/render-icon.sh" "$CODEX_STATUS_ICON_SVG" "$INSTALL_DIR" 2>/dev/null || true
-fi
-
 # Seed the state file so the menu bar shows something immediately.
 "$PY" "$INSTALL_DIR/codex-watch" --print-state > "$CODEX_HOME/state" 2>/dev/null \
   || printf 'idle\n' > "$CODEX_HOME/state"

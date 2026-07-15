@@ -188,18 +188,11 @@ open the sessions folder, refresh).
 The watcher writes two files the plugin reads: `~/.codex/state` (one word) and
 `~/.codex/status` (TAB-separated details).
 
-**Icon:** by default a single [SF Symbol](https://developer.apple.com/sf-symbols/)
-colored by state (no text, so it never overflows). To use a custom icon, render an
-SVG into per-state colored icons:
-
-```sh
-tools/render-icon.sh path/to/icon.svg      # writes icon-*.png into the install dir
-# or persist it across re-installs:
-CODEX_STATUS_ICON_SVG=path/to/icon.svg ./install.sh
-```
-
-The mark then recolors green/amber/red by state. Change the fallback SF Symbol via
-`ICON=` in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh).
+**Icon:** a single [SF Symbol](https://developer.apple.com/sf-symbols/) colored by
+state. While a turn runs it shows a cycling word (Thinking… / Cooking… /
+Prompting…) with a small blooming-flower spinner. Change the glyph by setting
+`ICON=` in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh) to any SF
+Symbol name (e.g. `sparkle`, `terminal.fill`, `hexagon.fill`).
 
 **Completion sound:** toggle it from the dropdown ("Completion sound: on/off"), or
 set the sound name with `CODEX_STATUS_SOUND_DONE` (e.g. `Glass`, or empty for silent).
