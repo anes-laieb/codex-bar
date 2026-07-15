@@ -17,6 +17,11 @@ config.toml.bak.*
 uninstall-manifest.env
 sound
 
+# Build output (the app is built locally, never committed)
+build/
+app/build/
+*.app
+
 # Editor / local
 *.swp
 .idea/

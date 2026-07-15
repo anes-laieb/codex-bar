@@ -73,9 +73,31 @@ SwiftBar/xbar.
 
 ## Install
 
+### Option A — the standalone app (recommended)
+
+A self-contained menu-bar app. No SwiftBar, no Python, no LaunchAgent — it watches
+the logs itself, shows the icon, animates, and posts notifications.
+
 ```sh
 git clone https://github.com/OWNER/codex-macos-status.git
 cd codex-macos-status
+./install-app.sh
+```
+
+That builds `CodexStatus.app` (with your Xcode command-line tools), installs it to
+`/Applications`, and launches it. Open its menu and enable **Launch at Login** to
+keep it running across restarts. To uninstall: quit it from its menu and delete
+`/Applications/CodexStatus.app`.
+
+> Requires the Swift toolchain (`xcode-select --install`, or full Xcode). The app
+> is a normal menu-bar item — if your menu bar is very full (notch), reveal it by
+> ⌘-dragging items apart or using a menu-bar manager (e.g. Ice/Bartender).
+
+### Option B — SwiftBar/xbar plugin
+
+Prefer to render through SwiftBar (e.g. you already use it)? Use the plugin path:
+
+```sh
 ./install.sh
 ```
 
@@ -91,7 +113,10 @@ That:
 SwiftBar and re-run `./install.sh` (or copy `plugins/codex-status.1s.sh` into your
 plugin folder yourself).
 
-### One-time SwiftBar setup
+> Run **either** Option A or Option B, not both (they'd double up). `install-app.sh`
+> automatically stops the Option B watcher/plugin when you switch to the app.
+
+#### One-time SwiftBar setup
 
 ```sh
 brew install --cask swiftbar
@@ -236,12 +261,18 @@ used), and removes `~/.codex/codex-macos-status/`. Idempotent.
 
 ```
 codex-macos-status/
-├── install.sh                  # idempotent installer (LaunchAgent + plugin [+ optional hook])
-├── uninstall.sh                # idempotent uninstaller / reverter
+├── install-app.sh              # Option A: build + install the standalone app
+├── app/
+│   ├── CodexStatus.swift       # the menu-bar app (watcher + UI + notifications)
+│   ├── Info.plist              # app bundle metadata (LSUIElement menu-bar app)
+│   └── build.sh                # compile CodexStatus.swift -> CodexStatus.app
+├── install.sh                  # Option B: SwiftBar plugin + LaunchAgent [+ optional hook]
+├── uninstall.sh                # uninstaller / reverter for Option B
 ├── bin/
 │   ├── codex-watch             # the watcher: rollout logs -> state file + notifications
 │   ├── codex-notifier          # send one mac notification (terminal-notifier -> osascript)
-│   └── codex-notify-hook       # OPTIONAL config.toml notify-hook handler (best-effort)
+│   ├── codex-notify-hook       # OPTIONAL config.toml notify-hook handler (best-effort)
+│   └── codex-status-sound      # toggle the completion sound on/off
 ├── plugins/
 │   └── codex-status.1s.sh      # SwiftBar/xbar menu-bar plugin (reads ~/.codex/state)
 ├── tools/
