@@ -185,10 +185,15 @@ submenu), and quick actions (open the watcher log, open the sessions folder,
 refresh).
 
 The watcher writes two files the plugin reads: `~/.codex/state` (one word) and
-`~/.codex/status` (TAB-separated details). Changing the logo is a one-line edit
-in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh) — set `ICON=` to any
-[SF Symbol](https://developer.apple.com/sf-symbols/) name (e.g. `terminal.fill`,
-`sparkle`), or swap in your own `image=` (base64 PNG).
+`~/.codex/status` (TAB-separated details).
+
+**Icon:** if the Codex / ChatGPT app is installed, `install.sh` extracts its logo
+locally to `~/.codex/codex-macos-status/logo-for-*.png` (git-ignored — the
+trademarked logo is never committed) and the menu bar uses it, picking the
+light/dark variant to match your menu-bar appearance. Otherwise it falls back to
+a `</>` [SF Symbol](https://developer.apple.com/sf-symbols/), colored by state.
+To force the glyph, delete the `logo-for-*.png` files; to change the glyph, set
+`ICON=` in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh).
 
 ### Configuration (environment variables)
 

@@ -28,6 +28,19 @@ ICON="chevron.left.forwardslash.chevron.right"   # the "</>" Codex glyph
 STALE=30                                          # watcher heartbeats ~10s
 FLOWER=( "✿" "❀" "✾" "❁" "❋" "✾" "❀" )            # bloom animation frames
 
+# Official Codex logo, if install.sh extracted it locally (never in the repo).
+# Pick the variant that reads on the current menu-bar appearance; encode once.
+# Empty -> the plugin falls back to a "</>" SF Symbol below.
+LOGO_DIR="$CODEX_DIR/codex-macos-status"
+LOGO_B64=""
+_sel=""
+if [ "${OS_APPEARANCE:-dark}" = "light" ]; then
+  for c in logo-for-light.png logo-for-dark.png; do [ -f "$LOGO_DIR/$c" ] && _sel="$LOGO_DIR/$c" && break; done
+else
+  for c in logo-for-dark.png logo-for-light.png; do [ -f "$LOGO_DIR/$c" ] && _sel="$LOGO_DIR/$c" && break; done
+fi
+[ -n "$_sel" ] && LOGO_B64=$(base64 < "$_sel" 2>/dev/null | tr -d '\n')
+
 fmt_dur() {  # seconds -> "Xm Ys" / "Ys"
   s=$1; [ -z "$s" ] && { echo ""; return; }
   m=$(( s / 60 )); r=$(( s % 60 ))
@@ -71,9 +84,14 @@ render() {
     *)              color="#8e8e93"; title="";         label="unknown" ;;
   esac
 
-  # menu-bar title: icon (+ text when working/approval)
-  params="sfimage=${sf} sfcolor=${color}"
-  if [ -n "$title" ]; then echo "${title} | ${params}"; else echo "| ${params}"; fi
+  # menu-bar title: the official Codex logo when available (not while stale/
+  # unknown, where a colored glyph signals the problem); else the </> glyph.
+  if [ -n "$LOGO_B64" ] && [ "$eff" != "stale" ] && [ "$eff" != "unknown" ]; then
+    params="image=${LOGO_B64}"
+  else
+    params="sfimage=${sf} sfcolor=${color}"
+  fi
+  if [ -n "$title" ]; then echo "${title} | ${params} color=${color}"; else echo "| ${params}"; fi
 
   echo "---"
   echo "Codex — ${label} | ${params}"
