@@ -93,8 +93,14 @@ plugin folder yourself).
 brew install --cask swiftbar
 ```
 
-Open SwiftBar once and choose a plugins folder (e.g. `~/.swiftbar`). Re-run
-`./install.sh` and the plugin drops in and appears within a second.
+Open SwiftBar once and choose a **dedicated** plugins folder — e.g. `~/.swiftbar`.
+Re-run `./install.sh` and the plugin drops in and appears within a second.
+
+> ⚠️ **Point SwiftBar at a dedicated folder, never a folder that contains other
+> files.** SwiftBar runs *every* file in its plugin folder (recursively) and marks
+> them executable — aim it at a project directory and it will try to "run" your
+> README, license, and scripts. `install.sh` creates `~/.swiftbar` for you when
+> SwiftBar has no folder configured yet.
 
 ---
 

@@ -45,7 +45,7 @@ if [ -n "${PLUGIN_INSTALLED:-}" ] && [ -f "$PLUGIN_INSTALLED" ]; then
   rm -f "$PLUGIN_INSTALLED" && echo "    removed $PLUGIN_INSTALLED"; removed_plugin=1
 fi
 # Belt-and-suspenders: also check current SwiftBar/xbar plugin dirs.
-for pref in com.ambar.SwiftBar:PluginDirectory com.xbarapp.app:PluginDirectory; do
+for pref in com.ameba.SwiftBar:PluginDirectory com.xbarapp.app:PluginDirectory; do
   app=${pref%%:*}; key=${pref##*:}
   dir=$(defaults read "$app" "$key" 2>/dev/null || true)
   if [ -n "$dir" ] && [ -f "$dir/codex-status.1s.sh" ]; then

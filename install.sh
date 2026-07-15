@@ -77,24 +77,41 @@ launchctl bootstrap "$GUI" "$PLIST" 2>/dev/null || launchctl load -w "$PLIST" 2>
 launchctl kickstart -k "$GUI/$LABEL" 2>/dev/null || true
 echo "    watcher loaded ($LABEL)"
 
-# Menu-bar plugin.
+# Menu-bar plugin. SwiftBar's real preference domain is com.ameba.SwiftBar.
+# SwiftBar runs EVERY file in its plugin folder (recursively) and chmods them
+# executable, so the folder MUST be dedicated. We prefer an already-configured
+# folder; if SwiftBar is installed but unconfigured we set up ~/.swiftbar.
 PLUGIN_INSTALLED=""
-SB=$(defaults read com.ambar.SwiftBar PluginDirectory 2>/dev/null || true)
+SB=$(defaults read com.ameba.SwiftBar PluginDirectory 2>/dev/null || true)
 XB=$(defaults read com.xbarapp.app PluginDirectory 2>/dev/null || true)
+DEST=""; APP=""
 if [ -n "$SB" ] && [ -d "$SB" ]; then
-  cp "$REPO_DIR/plugins/codex-status.1s.sh" "$SB/codex-status.1s.sh"
-  chmod +x "$SB/codex-status.1s.sh"
-  PLUGIN_INSTALLED="$SB/codex-status.1s.sh"
-  echo "==> installed SwiftBar plugin -> $PLUGIN_INSTALLED"
+  DEST="$SB"; APP="SwiftBar"
 elif [ -n "$XB" ] && [ -d "$XB" ]; then
-  cp "$REPO_DIR/plugins/codex-status.1s.sh" "$XB/codex-status.1s.sh"
-  chmod +x "$XB/codex-status.1s.sh"
-  PLUGIN_INSTALLED="$XB/codex-status.1s.sh"
-  echo "==> installed xbar plugin -> $PLUGIN_INSTALLED"
+  DEST="$XB"; APP="xbar"
+elif [ -d "/Applications/SwiftBar.app" ]; then
+  DEST="$HOME/.swiftbar"; mkdir -p "$DEST"
+  defaults write com.ameba.SwiftBar PluginDirectory "$DEST" 2>/dev/null || true
+  APP="SwiftBar (created dedicated folder $DEST)"
+fi
+
+if [ -n "$DEST" ]; then
+  cp "$REPO_DIR/plugins/codex-status.1s.sh" "$DEST/codex-status.1s.sh"
+  chmod +x "$DEST/codex-status.1s.sh"
+  PLUGIN_INSTALLED="$DEST/codex-status.1s.sh"
+  echo "==> installed menu-bar plugin -> $PLUGIN_INSTALLED   [$APP]"
+  subdirs=$(find "$DEST" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+  others=$(find "$DEST" -mindepth 1 -maxdepth 1 ! -name 'codex-status.1s.sh' 2>/dev/null | wc -l | tr -d ' ')
+  if [ "${subdirs:-0}" -gt 0 ] || [ "${others:-0}" -gt 12 ]; then
+    echo "    WARNING: $DEST is NOT a dedicated plugin folder (has subfolders/many files)."
+    echo "             SwiftBar runs EVERY file in it and marks them executable."
+    echo "             Point SwiftBar at a dedicated folder (e.g. ~/.swiftbar) to be safe."
+  fi
 else
-  echo "==> SwiftBar/xbar not detected. To get the menu-bar indicator:"
-  echo "      brew install --cask swiftbar   # then open SwiftBar, pick a plugin folder"
-  echo "      cp \"$REPO_DIR/plugins/codex-status.1s.sh\" \"<PluginFolder>/\""
+  echo "==> SwiftBar/xbar not detected. For the menu-bar indicator:"
+  echo "      brew install --cask swiftbar"
+  echo "      open SwiftBar and set its plugin folder to a DEDICATED dir (e.g. ~/.swiftbar),"
+  echo "      then re-run ./install.sh"
 fi
 
 # Optional notify hook (preserves any existing notify by chaining).
