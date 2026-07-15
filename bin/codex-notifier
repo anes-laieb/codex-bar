@@ -1,0 +1,41 @@
+#!/bin/sh
+# codex-notifier — send one macOS notification.
+#
+# Prefers terminal-notifier (click-to-focus + sound) and falls back to
+# osascript, so it works even if terminal-notifier is not installed. It never
+# hard-fails: a missing tool or a bad argument still exits 0 so callers (the
+# watcher) are never taken down by a notification problem.
+#
+# Usage:
+#   codex-notifier TITLE MESSAGE [SUBTITLE] [SOUND] [GROUP] [ACTIVATE_BUNDLE_ID]
+#
+# SOUND is a macOS sound name (e.g. Glass, Funk) or "" for silent.
+# GROUP coalesces notifications (terminal-notifier replaces same-group ones).
+# ACTIVATE_BUNDLE_ID is focused on click (terminal-notifier only).
+
+TITLE="${1:-Codex}"
+MSG="${2:-}"
+SUBTITLE="${3:-}"
+SOUND="${4:-}"
+GROUP="${5:-}"
+ACTIVATE="${6:-}"
+
+TN="$(command -v terminal-notifier 2>/dev/null)"
+if [ -n "$TN" ]; then
+  set -- -title "$TITLE" -message "$MSG"
+  [ -n "$SUBTITLE" ] && set -- "$@" -subtitle "$SUBTITLE"
+  [ -n "$SOUND" ]    && set -- "$@" -sound "$SOUND"
+  [ -n "$GROUP" ]    && set -- "$@" -group "$GROUP"
+  [ -n "$ACTIVATE" ] && set -- "$@" -activate "$ACTIVATE"
+  "$TN" "$@" >/dev/null 2>&1 || true
+  exit 0
+fi
+
+# Fallback: AppleScript. Escape backslashes and double quotes for the string.
+esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+AS_TITLE=$(esc "$TITLE"); AS_MSG=$(esc "$MSG"); AS_SUB=$(esc "$SUBTITLE")
+SCRIPT="display notification \"$AS_MSG\" with title \"$AS_TITLE\""
+[ -n "$SUBTITLE" ] && SCRIPT="$SCRIPT subtitle \"$AS_SUB\""
+[ -n "$SOUND" ]    && SCRIPT="$SCRIPT sound name \"$SOUND\""
+osascript -e "$SCRIPT" >/dev/null 2>&1 || true
+exit 0

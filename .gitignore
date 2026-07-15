@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Runtime artifacts (created at install/run time, never committed)
+notify.log
+notify.debug.log
+state
+state.tmp
+watcher.log
+*.bak
+*.bak.*
+config.toml.bak.*
+uninstall-manifest.env
+
+# Editor / local
+*.swp
+.idea/
+.vscode/

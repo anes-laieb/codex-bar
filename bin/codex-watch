@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+"""codex-watch — infer Codex activity from rollout logs and drive the menu-bar
+state file + native notifications.
+
+Codex has no statusline API and (on the sandboxed Desktop build) may not run
+third-party `notify` hooks, but it writes a JSONL "rollout" log per session
+under $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl. This watcher tails the
+most-recently-active rollout, maps events to a state, writes one word to
+$CODEX_HOME/state (idle | working | needs-approval), and fires a notification
+when a turn completes (or when an approval is requested, on versions that log
+one).
+
+Robustness: a line that doesn't parse is skipped and the last state is held;
+the watcher never crashes on malformed/rotated logs. Event/field names are read
+from the log as-is, and unknown events are ignored, so it degrades gracefully
+across Codex versions.
+
+Modes:
+  codex-watch                 Run the watcher loop (default; used by LaunchAgent).
+  codex-watch --print-state   Print the current inferred state and exit.
+  codex-watch --replay FILE   Replay a rollout file through the engine, printing
+                              the state transitions and notifications it WOULD
+                              fire (no real notifications). For testing.
+
+Config via environment:
+  CODEX_HOME               default ~/.codex
+  CODEX_STATUS_POLL        poll seconds (default 0.5)
+  CODEX_STATUS_HEARTBEAT   rewrite state file at least this often (default 10)
+  CODEX_STATUS_SOUND_DONE  sound for turn-complete (default "Glass"; "" silent)
+  CODEX_STATUS_SOUND_APPR  sound for approval (default "Funk"; "" silent)
+  CODEX_STATUS_ACTIVATE    bundle id to focus on click (default: auto-detect
+                           /Applications/ChatGPT.app, else unset)
+  CODEX_STATUS_NOTIFY      "1" (default) to send notifications, "0" to disable
+  CODEX_STATUS_NOTIFIER    path to the notifier program (default: the bundled
+                           codex-notifier next to this script)
+"""
+import argparse
+import json
+import os
+import plistlib
+import subprocess
+import sys
+import time
+
+IDLE = "idle"
+WORKING = "working"
+APPROVAL = "needs-approval"
+
+# Terminal state-changing event payload types (event_msg.payload.type).
+_START = {"task_started"}
+_DONE = {"task_complete"}
+_ABORT = {"turn_aborted"}
+# Approval detection is best-effort: not observed on every version, so we match
+# on substrings and treat request-like events as "needs approval". Endings that
+# indicate a *resolution* rather than a request are excluded.
+_APPROVAL_HINT = ("approval", "elicit")
+_RESOLVED_SUFFIX = ("end", "output", "complete", "completed", "decision",
+                    "response", "resolved", "denied", "approved")
+
+
+def codex_home():
+    return os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
+
+
+def sessions_dir(home):
+    return os.path.join(home, "sessions")
+
+
+class Engine:
+    """Pure state machine over rollout events. No I/O — unit-testable.
+
+    feed(obj) returns a dict:
+      {"state": <new state or None>, "notify": (title, body, kind) or None}
+    'state' is set only when the state actually changes. 'notify' is advisory;
+    the driver decides whether to actually send it (suppressed while catching up
+    on pre-existing history).
+    """
+
+    def __init__(self, state=IDLE):
+        self.state = state
+        self.last_message = None
+
+    def _set(self, new):
+        if new != self.state:
+            self.state = new
+            return new
+        return None
+
+    @staticmethod
+    def _looks_like_approval_request(key):
+        if not any(h in key for h in _APPROVAL_HINT):
+            return False
+        return not any(key.endswith(s) for s in _RESOLVED_SUFFIX)
+
+    @staticmethod
+    def _extract_command(p):
+        for k in ("command", "cmd", "call", "input", "action"):
+            v = p.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+            if isinstance(v, list) and v:
+                try:
+                    return " ".join(str(x) for x in v)
+                except Exception:
+                    pass
+        return None
+
+    def feed(self, obj):
+        out = {"state": None, "notify": None}
+        if not isinstance(obj, dict):
+            return out
+        t = obj.get("type")
+        p = obj.get("payload")
+        if not isinstance(p, dict):
+            return out
+        pt = p.get("type") or ""
+        key = (str(t) + "/" + str(pt)).lower()
+
+        # Approval request (best-effort; may never occur on this version).
+        if self._looks_like_approval_request(key):
+            out["state"] = self._set(APPROVAL)
+            cmd = self._extract_command(p)
+            out["notify"] = ("Codex needs approval", cmd or pt, "approval")
+            return out
+
+        if t == "event_msg":
+            if pt in _START:
+                out["state"] = self._set(WORKING)
+            elif pt in _DONE:
+                self.last_message = p.get("last_agent_message") or p.get("last-assistant-message")
+                out["state"] = self._set(IDLE)
+                out["notify"] = ("Codex — ready for you", (self.last_message or "").strip(), "complete")
+            elif pt in _ABORT:
+                out["state"] = self._set(IDLE)
+        return out
+
+
+# ---------- I/O helpers ----------
+
+def newest_rollout(home):
+    """Path of the most-recently-modified rollout file, or None."""
+    root = sessions_dir(home)
+    newest, newest_m = None, -1.0
+    for dirpath, _dirs, files in os.walk(root):
+        for name in files:
+            if name.startswith("rollout-") and name.endswith(".jsonl"):
+                fp = os.path.join(dirpath, name)
+                try:
+                    m = os.path.getmtime(fp)
+                except OSError:
+                    continue
+                if m > newest_m:
+                    newest, newest_m = fp, m
+    return newest
+
+
+def last_boundary_state(path):
+    """Scan a rollout file for its last task boundary to seed initial state."""
+    state = IDLE
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    o = json.loads(line)
+                except Exception:
+                    continue
+                if o.get("type") != "event_msg":
+                    continue
+                pt = (o.get("payload") or {}).get("type")
+                if pt in _START:
+                    state = WORKING
+                elif pt in _DONE or pt in _ABORT:
+                    state = IDLE
+    except OSError:
+        pass
+    return state
+
+
+def write_state(home, state):
+    path = os.path.join(home, "state")
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(state + "\n")
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def detect_activate():
+    env = os.environ.get("CODEX_STATUS_ACTIVATE")
+    if env is not None:
+        return env or None
+    plist = "/Applications/ChatGPT.app/Contents/Info.plist"
+    try:
+        with open(plist, "rb") as f:
+            data = plistlib.load(f)
+        return data.get("CFBundleIdentifier") or None
+    except Exception:
+        return None
+
+
+def dispatch_notify(notifier, title, body, kind, activate):
+    if os.environ.get("CODEX_STATUS_NOTIFY", "1") != "1":
+        return
+    body = body or ("Turn complete" if kind == "complete" else "")
+    if len(body) > 200:
+        body = body[:197] + "..."
+    if kind == "approval":
+        sound = os.environ.get("CODEX_STATUS_SOUND_APPR", "Funk")
+    else:
+        sound = os.environ.get("CODEX_STATUS_SOUND_DONE", "Glass")
+    args = [notifier, title, body, "", sound, "codex-status", activate or ""]
+    try:
+        subprocess.run(args, timeout=10, check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+
+def notifier_path():
+    # Explicit override wins (used for testing and custom notifiers).
+    env = os.environ.get("CODEX_STATUS_NOTIFIER")
+    if env:
+        return os.path.abspath(os.path.expanduser(env))
+    # The notifier ships alongside this script in the repo (../bin) or next to it
+    # once installed. Try same-dir first, then a couple of known layouts.
+    here = os.path.dirname(os.path.abspath(__file__))
+    for cand in (os.path.join(here, "codex-notifier"),
+                 os.path.join(here, "..", "bin", "codex-notifier")):
+        if os.path.isfile(cand) and os.access(cand, os.X_OK):
+            return os.path.abspath(cand)
+    return os.path.join(here, "codex-notifier")
+
+
+# ---------- run modes ----------
+
+def run_replay(path):
+    eng = Engine()
+    print(f"# replay {path}\n# initial state: {eng.state}")
+    n_lines = n_events = 0
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            n_lines += 1
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                o = json.loads(line)
+            except Exception:
+                continue
+            res = eng.feed(o)
+            if res["state"] or res["notify"]:
+                n_events += 1
+                bits = []
+                if res["state"]:
+                    bits.append(f"STATE -> {res['state']}")
+                if res["notify"]:
+                    tt, bb, kk = res["notify"]
+                    bb = (bb[:80] + "…") if len(bb) > 80 else bb
+                    bits.append(f"NOTIFY[{kk}] {tt!r}: {bb!r}")
+                print("  " + " | ".join(bits))
+    print(f"# {n_lines} lines, {n_events} state/notify actions, final state: {eng.state}")
+    return 0
+
+
+def run_print_state(home):
+    f = newest_rollout(home)
+    print(last_boundary_state(f) if f else IDLE)
+    return 0
+
+
+def run_loop(home):
+    poll = float(os.environ.get("CODEX_STATUS_POLL", "0.5"))
+    heartbeat = float(os.environ.get("CODEX_STATUS_HEARTBEAT", "10"))
+    activate = detect_activate()
+    notifier = notifier_path()
+
+    cur_path = newest_rollout(home)
+    eng = Engine(state=last_boundary_state(cur_path) if cur_path else IDLE)
+    offset = 0
+    if cur_path:
+        try:
+            offset = os.path.getsize(cur_path)  # skip history on the first file
+        except OSError:
+            offset = 0
+    buf = ""
+    write_state(home, eng.state)
+    last_written = eng.state
+    last_beat = _mono()
+
+    while True:
+        try:
+            newest = newest_rollout(home)
+            if newest and newest != cur_path:
+                # A newer session appeared; process it from the beginning so we
+                # catch its completion, but seed state from its boundaries.
+                cur_path = newest
+                eng = Engine(state=last_boundary_state(cur_path))
+                offset = 0
+                buf = ""
+
+            if cur_path:
+                size = os.path.getsize(cur_path)
+                if size < offset:      # file truncated/rotated
+                    offset = 0
+                    buf = ""
+                if size > offset:
+                    with open(cur_path, "r", encoding="utf-8", errors="replace") as f:
+                        f.seek(offset)
+                        chunk = f.read()
+                        offset = f.tell()
+                    buf += chunk
+                    lines = buf.split("\n")
+                    buf = lines.pop()        # keep trailing partial line
+                    for line in lines:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            o = json.loads(line)
+                        except Exception:
+                            continue        # hold last state on parse error
+                        res = eng.feed(o)
+                        if res["state"] and res["state"] != last_written:
+                            write_state(home, res["state"])
+                            last_written = res["state"]
+                        if res["notify"]:
+                            tt, bb, kk = res["notify"]
+                            dispatch_notify(notifier, tt, bb, kk, activate)
+
+            now = _mono()
+            if now - last_beat >= heartbeat:
+                write_state(home, eng.state)   # liveness heartbeat
+                last_written = eng.state
+                last_beat = now
+        except Exception:
+            # Never let the loop die; hold last state and keep polling.
+            pass
+        time.sleep(poll)
+
+
+def _mono():
+    # time.monotonic is available on 3.9; kept in a helper to centralise clock use.
+    return time.monotonic()
+
+
+def main(argv):
+    ap = argparse.ArgumentParser(prog="codex-watch")
+    g = ap.add_mutually_exclusive_group()
+    g.add_argument("--print-state", action="store_true")
+    g.add_argument("--replay", metavar="FILE")
+    ns = ap.parse_args(argv)
+    home = codex_home()
+    if ns.replay:
+        return run_replay(ns.replay)
+    if ns.print_state:
+        return run_print_state(home)
+    return run_loop(home)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        sys.exit(0)

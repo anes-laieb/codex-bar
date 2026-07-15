@@ -1,0 +1,63 @@
+#!/bin/sh
+# codex-notify-logger — Phase 1 discovery tool for codex-macos-status.
+#
+# Codex CLI's `notify` hook runs an external program and passes a single JSON
+# string as the LAST argv argument. This script records that raw JSON (plus a
+# timestamp) to $CODEX_HOME/notify.log so we can learn the real event schema of
+# THIS Codex version instead of guessing field names.
+#
+# It also (a) writes a richer diagnostic line to notify.debug.log — every argv
+# and the HOME/CODEX_HOME/PWD the hook ran with, to catch a sandboxed or
+# unexpected environment; and (b) can forward the event to a previously-
+# configured notify program, so wiring this in for discovery does not disable
+# an existing integration.
+#
+# Usage (from config.toml `notify`):
+#   notify = ["/abs/path/codex-notify-logger"]                     # log only
+#   notify = ["/abs/path/codex-notify-logger", "PREV", "ARG1"]     # log + forward
+#     -> logs the JSON, then runs: PREV ARG1 <JSON>
+#
+# Design goals: never block Codex, never crash on empty/malformed input,
+# never exit non-zero. Pure POSIX sh so it runs with no interpreter deps.
+
+CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
+LOG="$CODEX_DIR/notify.log"
+DBG="$CODEX_DIR/notify.debug.log"
+FALLBACK="/tmp/codex-notify.log"   # last-resort if $CODEX_DIR is not writable
+
+# ISO-8601 local timestamp; fall back to epoch, then to a literal if date fails.
+TS=$(date +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || date +%s 2>/dev/null || echo "no-date")
+
+# Codex always passes the JSON payload as the final argument.
+if [ "$#" -ge 1 ]; then
+  eval "JSON=\${$#}"
+else
+  JSON=""
+fi
+
+# Clean, parseable data line: <timestamp>\t<raw-json>. If $CODEX_DIR can't be
+# written (e.g. a sandboxed HOME), fall back to /tmp so the log is never lost.
+if ! printf '%s\t%s\n' "$TS" "$JSON" >> "$LOG" 2>/dev/null; then
+  printf '%s\t%s\n' "$TS" "$JSON" >> "$FALLBACK" 2>/dev/null || true
+fi
+
+# Diagnostic channel: full environment + every argument Codex actually passed.
+{
+  printf '%s argc=%s HOME=%s CODEX_HOME=%s PWD=%s\n' "$TS" "$#" "$HOME" "${CODEX_HOME:-<unset>}" "$PWD"
+  i=1
+  for a in "$@"; do
+    printf '  argv[%s]=%s\n' "$i" "$a"
+    i=$((i + 1))
+  done
+} >> "$DBG" 2>/dev/null || true
+
+# Forward to a previously-configured notify program, if one was passed as the
+# leading argv element(s). After shifting off the program name, "$@" is exactly
+# [PREV_ARGS..., JSON] — i.e. the child receives the JSON as its last arg too.
+if [ "$#" -ge 2 ]; then
+  prog="$1"
+  shift
+  "$prog" "$@" >/dev/null 2>&1 || true
+fi
+
+exit 0
