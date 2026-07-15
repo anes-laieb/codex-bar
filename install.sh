@@ -38,10 +38,17 @@ PY=$(command -v python3 || true)
 
 echo "==> installing runtime -> $INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
-for rel in bin/codex-watch bin/codex-notifier bin/codex-notify-hook tools/codex-notify-logger; do
+for rel in bin/codex-watch bin/codex-notifier bin/codex-notify-hook bin/codex-status-sound tools/codex-notify-logger; do
   cp "$REPO_DIR/$rel" "$INSTALL_DIR/$(basename "$rel")"
   chmod +x "$INSTALL_DIR/$(basename "$rel")"
 done
+
+# Optional: render a custom SVG into per-state menu-bar icons. Set
+# CODEX_STATUS_ICON_SVG=/path/to/icon.svg to (re)generate them on install.
+# Already-rendered icon-*.png in the install dir are preserved across re-runs.
+if [ -n "${CODEX_STATUS_ICON_SVG:-}" ] && [ -f "$CODEX_STATUS_ICON_SVG" ]; then
+  sh "$REPO_DIR/tools/render-icon.sh" "$CODEX_STATUS_ICON_SVG" "$INSTALL_DIR" 2>/dev/null || true
+fi
 
 # Seed the state file so the menu bar shows something immediately.
 "$PY" "$INSTALL_DIR/codex-watch" --print-state > "$CODEX_HOME/state" 2>/dev/null \
@@ -71,11 +78,20 @@ cat > "$PLIST" <<PLIST
 </plist>
 PLIST
 
-# (Re)load with modern launchctl, falling back to legacy verbs.
-launchctl bootout "$GUI/$LABEL" 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null || true
-launchctl bootstrap "$GUI" "$PLIST" 2>/dev/null || launchctl load -w "$PLIST" 2>/dev/null || true
+# (Re)load robustly. A bootout immediately followed by bootstrap can hit a
+# transient "Input/output error" that leaves the agent UNLOADED, so we retry
+# bootstrap, fall back to legacy load, then verify and warn if it didn't stick.
+launchctl bootout "$GUI/$LABEL" 2>/dev/null || true
+launchctl bootstrap "$GUI" "$PLIST" 2>/dev/null \
+  || launchctl bootstrap "$GUI" "$PLIST" 2>/dev/null \
+  || launchctl load -w "$PLIST" 2>/dev/null || true
+launchctl enable "$GUI/$LABEL" 2>/dev/null || true
 launchctl kickstart -k "$GUI/$LABEL" 2>/dev/null || true
-echo "    watcher loaded ($LABEL)"
+if launchctl print "$GUI/$LABEL" >/dev/null 2>&1; then
+  echo "    watcher loaded ($LABEL)"
+else
+  echo "    WARNING: watcher failed to load. Retry: launchctl bootstrap $GUI \"$PLIST\""
+fi
 
 # Menu-bar plugin. SwiftBar's real preference domain is com.ameba.SwiftBar.
 # SwiftBar runs EVERY file in its plugin folder (recursively) and chmods them

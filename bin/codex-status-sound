@@ -1,0 +1,19 @@
+#!/bin/sh
+# codex-status-sound — turn the turn-complete notification sound on/off.
+# The watcher reads this setting when it fires a completion notification.
+# Usage: codex-status-sound [toggle|on|off|status]   (default: toggle)
+
+D="${CODEX_HOME:-$HOME/.codex}/codex-macos-status"
+F="$D/sound"
+mkdir -p "$D"
+
+cur=on
+[ -f "$F" ] && cur=$(tr -d '[:space:]' < "$F")
+[ "$cur" = "off" ] || cur=on
+
+case "${1:-toggle}" in
+  on)     echo on  > "$F"; echo on ;;
+  off)    echo off > "$F"; echo off ;;
+  status) echo "$cur" ;;
+  *)      if [ "$cur" = "on" ]; then echo off > "$F"; echo off; else echo on > "$F"; echo on; fi ;;
+esac

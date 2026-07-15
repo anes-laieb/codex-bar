@@ -6,10 +6,11 @@ Native macOS notifications and a menu-bar status indicator for the
 
 - 🔔 **Notification when a turn completes** — title *“Codex — ready for you”*,
   body = the assistant's final message.
-- **Menu-bar indicator** — a `</>` Codex glyph, **green idle / amber working / red
-  needs-approval**, with a live **blooming animation** while a turn runs.
+- **Menu-bar indicator** — one small icon that recolors by state (**green idle /
+  amber working / red needs-approval**), amber gently pulsing while a turn runs.
 - **Live turn info in the dropdown** — elapsed time, project, model · effort,
   approval policy, and the last message.
+- **Completion sound**, toggleable on/off right from the dropdown.
 - 🧩 Installs with one command, uninstalls cleanly, and **never blindly rewrites
   your `~/.codex/config.toml`**.
 
@@ -170,30 +171,38 @@ change. PRs adding version names are welcome.
 ## Usage
 
 Once installed there's nothing to run — the LaunchAgent keeps the watcher alive
-across logins. The menu bar shows a `</>` glyph colored by state:
+across logins. The menu bar shows one icon, colored by state:
 
-| Icon | State | Meaning |
+| Icon color | State | Meaning |
 | --- | --- | --- |
-| green `</>` | idle | Codex is waiting for you |
-| amber `</>` + `Working ✿` | working | a turn is in progress (animated bloom) |
-| red `⚠` `Approval` | needs approval | waiting on an approval (if your version emits one) |
-| gray `</>` | unknown / stale | watcher not running (status >30s stale) |
+| green | idle | Codex is waiting for you |
+| amber (pulsing) | working | a turn is in progress |
+| red | needs approval | waiting on an approval (if your version emits one) |
+| gray | unknown / stale | watcher not running (status >30s stale) |
 
 Click it for the dropdown: current state, **elapsed / last-turn time**, **project**,
 **model · effort**, **approval policy**, the **last message** (full text in a
-submenu), and quick actions (open the watcher log, open the sessions folder,
-refresh).
+submenu), a **completion-sound toggle**, and quick actions (open the watcher log,
+open the sessions folder, refresh).
 
 The watcher writes two files the plugin reads: `~/.codex/state` (one word) and
 `~/.codex/status` (TAB-separated details).
 
-**Icon:** a single [SF Symbol](https://developer.apple.com/sf-symbols/) colored by
-state — no text in the menu bar, so it never overflows. Change it by setting
-`ICON=` in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh) to any SF
-Symbol name (e.g. `terminal.fill`, `hexagon.fill`, `chevron.left.forwardslash.chevron.right`).
-To use your own icon instead, drop a small square transparent PNG at
-`~/.codex/codex-macos-status/icon.png`; state then shows as a small colored dot
-beside it.
+**Icon:** by default a single [SF Symbol](https://developer.apple.com/sf-symbols/)
+colored by state (no text, so it never overflows). To use a custom icon, render an
+SVG into per-state colored icons:
+
+```sh
+tools/render-icon.sh path/to/icon.svg      # writes icon-*.png into the install dir
+# or persist it across re-installs:
+CODEX_STATUS_ICON_SVG=path/to/icon.svg ./install.sh
+```
+
+The mark then recolors green/amber/red by state. Change the fallback SF Symbol via
+`ICON=` in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh).
+
+**Completion sound:** toggle it from the dropdown ("Completion sound: on/off"), or
+set the sound name with `CODEX_STATUS_SOUND_DONE` (e.g. `Glass`, or empty for silent).
 
 ### Configuration (environment variables)
 

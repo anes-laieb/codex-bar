@@ -66,6 +66,15 @@ def sessions_dir(home):
     return os.path.join(home, "sessions")
 
 
+def sound_enabled(home):
+    """Whether the completion sound is on (toggled via codex-status-sound)."""
+    try:
+        with open(os.path.join(home, "codex-macos-status", "sound"), "r", encoding="utf-8") as f:
+            return f.read().strip() != "off"
+    except OSError:
+        return True  # default on
+
+
 class Engine:
     """Pure state machine over rollout events. No I/O — unit-testable.
 
@@ -323,6 +332,8 @@ def dispatch_notify(notifier, title, body, kind, activate):
         sound = os.environ.get("CODEX_STATUS_SOUND_APPR", "Funk")
     else:
         sound = os.environ.get("CODEX_STATUS_SOUND_DONE", "Glass")
+    if not sound_enabled(codex_home()):
+        sound = ""
     args = [notifier, title, body, "", sound, "codex-status", activate or ""]
     try:
         subprocess.run(args, timeout=10, check=False,

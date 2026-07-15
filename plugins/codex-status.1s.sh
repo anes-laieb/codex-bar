@@ -26,15 +26,11 @@ STALE=30
 
 # The icon is an SF Symbol — change ICON to any name from the SF Symbols app
 # (e.g. "chevron.left.forwardslash.chevron.right", "terminal.fill", "hexagon.fill").
-ICON="sparkle"
-WORK_FRAMES=( "sparkle" "sparkles" )   # gentle working pulse (~1 fps; SwiftBar's limit)
-
-# Optional custom icon: drop a small square (transparent) PNG here and it is used
-# instead of the SF Symbol. A fixed image can't recolor, so state then shows as a
-# small colored dot beside it.
-ICON_FILE="$CODEX_DIR/codex-macos-status/icon.png"
-ICON_B64=""
-[ -f "$ICON_FILE" ] && ICON_B64=$(base64 < "$ICON_FILE" 2>/dev/null | tr -d '\n')
+ICON="sparkle"                         # SF Symbol fallback if no rendered icons
+WORK_FRAMES=( "sparkle" "sparkles" )
+# Per-state colored PNGs rendered from an SVG by tools/render-icon.sh, if present
+# (icon-idle / icon-working / icon-working2 / icon-approval / icon-stale).
+ICON_DIR="$CODEX_DIR/codex-macos-status"
 
 fmt_dur() {
   s=$1; [ -z "$s" ] && { echo ""; return; }
@@ -76,9 +72,16 @@ case "$eff" in
   *)              color="#8e8e93"; sf="$ICON"; label="unknown" ;;
 esac
 
-# Menu bar: custom icon + a small state dot, or (default) a colored SF Symbol.
-if [ -n "$ICON_B64" ]; then
-  echo "● | image=${ICON_B64} color=${color} size=13"
+# Menu bar: the rendered per-state icon if available (recolors by state, with a
+# gentle 2-frame working pulse), else a colored SF Symbol.
+case "$eff" in
+  working) if [ $(( now % 2 )) -eq 0 ]; then ifile="$ICON_DIR/icon-working.png"; else ifile="$ICON_DIR/icon-working2.png"; fi ;;
+  idle)           ifile="$ICON_DIR/icon-idle.png" ;;
+  needs-approval) ifile="$ICON_DIR/icon-approval.png" ;;
+  *)              ifile="$ICON_DIR/icon-stale.png" ;;
+esac
+if [ -f "$ifile" ]; then
+  echo "| image=$(base64 < "$ifile" | tr -d '\n')"
 else
   echo "| sfimage=${sf} sfcolor=${color}"
 fi
@@ -114,6 +117,13 @@ if [ "$eff" = "stale" ]; then
   echo "Watcher not updating (${ago}s) — run ./install.sh | color=#ff9f0a"
 elif [ -n "$ago" ]; then
   echo "Updated ${ago}s ago | size=11 color=#8e8e93"
+fi
+snd=on; [ -f "$ICON_DIR/sound" ] && snd=$(tr -d '[:space:]' < "$ICON_DIR/sound")
+[ "$snd" = "off" ] || snd=on
+if [ "$snd" = "on" ]; then
+  echo "🔔 Completion sound: on | bash=\"$ICON_DIR/codex-status-sound\" param1=toggle terminal=false refresh=true"
+else
+  echo "🔕 Completion sound: off | bash=\"$ICON_DIR/codex-status-sound\" param1=toggle terminal=false refresh=true"
 fi
 echo "Open watcher log | bash=/usr/bin/open param1=\"$LOGF\" terminal=false"
 echo "Open sessions folder | bash=/usr/bin/open param1=\"$SESS\" terminal=false"
