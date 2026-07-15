@@ -15,8 +15,6 @@ watcher.log
 *.bak.*
 config.toml.bak.*
 uninstall-manifest.env
-logo-for-dark.png
-logo-for-light.png
 
 # Editor / local
 *.swp

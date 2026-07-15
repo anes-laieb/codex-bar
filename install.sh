@@ -43,10 +43,6 @@ for rel in bin/codex-watch bin/codex-notifier bin/codex-notify-hook tools/codex-
   chmod +x "$INSTALL_DIR/$(basename "$rel")"
 done
 
-# Best-effort: use the real Codex logo from the installed app as the menu-bar
-# icon (kept local, never committed). Falls back to a </> glyph if unavailable.
-sh "$REPO_DIR/tools/extract-logo.sh" "$INSTALL_DIR" 2>/dev/null || true
-
 # Seed the state file so the menu bar shows something immediately.
 "$PY" "$INSTALL_DIR/codex-watch" --print-state > "$CODEX_HOME/state" 2>/dev/null \
   || printf 'idle\n' > "$CODEX_HOME/state"
