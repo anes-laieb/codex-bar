@@ -145,7 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var frame = 0
     private var lastColor: NSColor?
 
-    private let icon = "chevron.left.forwardslash.chevron.right"
+    private let icon = "sparkle"
     private let words = ["Thinking", "Cooking", "Prompting", "Brewing", "Reasoning",
                          "Crunching", "Pondering", "Plotting", "Noodling", "Simmering",
                          "Vibing", "Scheming"]
