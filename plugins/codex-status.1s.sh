@@ -31,7 +31,7 @@ STALE=30
 
 # Change ICON to any SF Symbol name (SF Symbols app), e.g. "sparkle",
 # "terminal.fill", "hexagon.fill".
-ICON="chevron.left.forwardslash.chevron.right"
+ICON="sparkle"
 FLOWER=( "✿" "❀" "✾" "❁" "❋" "✾" "❀" )
 WORDS=( "Thinking" "Cooking" "Prompting" "Brewing" "Reasoning" "Crunching" \
         "Pondering" "Plotting" "Noodling" "Simmering" "Vibing" "Scheming" )

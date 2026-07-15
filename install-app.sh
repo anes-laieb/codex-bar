@@ -39,7 +39,7 @@ killall CodexStatus 2>/dev/null || true   # relaunch the freshly built binary
 open "$DEST"
 
 echo ""
-echo "Done. 'Codex Status' is running in your menu bar (look for the </> icon)."
+echo "Done. 'Codex Status' is running in your menu bar (look for the sparkle icon)."
 echo "  • App: $DEST"
 echo "  • Enable 'Launch at Login' from its menu to keep it across restarts."
 echo "  • Quit from its menu; delete $DEST to uninstall."
