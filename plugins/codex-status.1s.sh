@@ -29,6 +29,13 @@ STALE=30
 ICON="sparkle"
 WORK_FRAMES=( "sparkle" "sparkles" )   # gentle working pulse (~1 fps; SwiftBar's limit)
 
+# Optional custom icon: drop a small square (transparent) PNG here and it is used
+# instead of the SF Symbol. A fixed image can't recolor, so state then shows as a
+# small colored dot beside it.
+ICON_FILE="$CODEX_DIR/codex-macos-status/icon.png"
+ICON_B64=""
+[ -f "$ICON_FILE" ] && ICON_B64=$(base64 < "$ICON_FILE" 2>/dev/null | tr -d '\n')
+
 fmt_dur() {
   s=$1; [ -z "$s" ] && { echo ""; return; }
   m=$(( s / 60 )); r=$(( s % 60 ))
@@ -69,8 +76,12 @@ case "$eff" in
   *)              color="#8e8e93"; sf="$ICON"; label="unknown" ;;
 esac
 
-# Menu bar: icon only (no text → never truncates).
-echo "| sfimage=${sf} sfcolor=${color}"
+# Menu bar: custom icon + a small state dot, or (default) a colored SF Symbol.
+if [ -n "$ICON_B64" ]; then
+  echo "● | image=${ICON_B64} color=${color} size=13"
+else
+  echo "| sfimage=${sf} sfcolor=${color}"
+fi
 
 echo "---"
 echo "Codex — ${label} | sfimage=${sf} sfcolor=${color}"

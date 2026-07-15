@@ -191,6 +191,9 @@ The watcher writes two files the plugin reads: `~/.codex/state` (one word) and
 state — no text in the menu bar, so it never overflows. Change it by setting
 `ICON=` in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh) to any SF
 Symbol name (e.g. `terminal.fill`, `hexagon.fill`, `chevron.left.forwardslash.chevron.right`).
+To use your own icon instead, drop a small square transparent PNG at
+`~/.codex/codex-macos-status/icon.png`; state then shows as a small colored dot
+beside it.
 
 ### Configuration (environment variables)
 
