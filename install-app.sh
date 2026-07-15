@@ -35,6 +35,7 @@ cp -R "$SRC" "$DEST_DIR/"
 DEST="$DEST_DIR/CodexStatus.app"
 
 echo "==> launching"
+killall CodexStatus 2>/dev/null || true   # relaunch the freshly built binary
 open "$DEST"
 
 echo ""

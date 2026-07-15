@@ -143,6 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let watcher: Watcher
     private var timer: Timer?
     private var frame = 0
+    private var lastColor: NSColor?
 
     private let icon = "chevron.left.forwardslash.chevron.right"
     private let words = ["Thinking", "Cooking", "Prompting", "Brewing", "Reasoning",
@@ -159,12 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ note: Notification) {
         UserDefaults.standard.register(defaults: ["completionSound": true])
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        if let button = statusItem.button {
-            let img = NSImage(systemSymbolName: icon, accessibilityDescription: "Codex")
-            img?.isTemplate = true
-            button.image = img
-            button.imagePosition = .imageLeading
-        }
+        statusItem.button?.imagePosition = .imageLeading
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
@@ -196,7 +192,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func render() {
         guard let button = statusItem.button else { return }
         let c = color()
-        button.contentTintColor = c
+        // Rebuild the icon in the state color (bold, NON-template so the color
+        // actually shows — a template image would render menu-bar white).
+        if lastColor != c {
+            lastColor = c
+            let cfg = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [c]))
+            let img = NSImage(systemSymbolName: icon, accessibilityDescription: "Codex")?
+                .withSymbolConfiguration(cfg)
+            img?.isTemplate = false
+            button.image = img
+        }
         var title = ""
         switch watcher.state {
         case .working:
