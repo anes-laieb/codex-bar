@@ -79,6 +79,8 @@ class Engine:
     def __init__(self, state=IDLE):
         self.state = state
         self.last_message = None
+        self.started_at = None   # epoch of the in-progress turn (task_started)
+        self.duration_ms = None  # duration of the last completed turn
 
     def _set(self, new):
         if new != self.state:
@@ -125,12 +127,15 @@ class Engine:
 
         if t == "event_msg":
             if pt in _START:
+                self.started_at = p.get("started_at")
                 out["state"] = self._set(WORKING)
             elif pt in _DONE:
                 self.last_message = p.get("last_agent_message") or p.get("last-assistant-message")
+                self.duration_ms = p.get("duration_ms")
                 out["state"] = self._set(IDLE)
                 out["notify"] = ("Codex — ready for you", (self.last_message or "").strip(), "complete")
             elif pt in _ABORT:
+                self.duration_ms = p.get("duration_ms")
                 out["state"] = self._set(IDLE)
         return out
 
@@ -154,9 +159,9 @@ def newest_rollout(home):
     return newest
 
 
-def last_boundary_state(path):
-    """Scan a rollout file for its last task boundary to seed initial state."""
-    state = IDLE
+def scan_boundary(path):
+    """Scan a rollout for its latest task boundary, seeding state + turn info."""
+    info = {"state": IDLE, "started_at": None, "duration_ms": None, "last_message": None}
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
@@ -169,14 +174,31 @@ def last_boundary_state(path):
                     continue
                 if o.get("type") != "event_msg":
                     continue
-                pt = (o.get("payload") or {}).get("type")
+                p = o.get("payload") or {}
+                pt = p.get("type")
                 if pt in _START:
-                    state = WORKING
-                elif pt in _DONE or pt in _ABORT:
-                    state = IDLE
+                    info["state"] = WORKING
+                    info["started_at"] = p.get("started_at")
+                elif pt in _DONE:
+                    info["state"] = IDLE
+                    info["duration_ms"] = p.get("duration_ms")
+                    info["last_message"] = p.get("last_agent_message") or p.get("last-assistant-message")
+                elif pt in _ABORT:
+                    info["state"] = IDLE
+                    info["duration_ms"] = p.get("duration_ms")
     except OSError:
         pass
-    return state
+    return info
+
+
+def seed_engine(path):
+    """Build an Engine pre-loaded from a rollout's latest boundary."""
+    b = scan_boundary(path)
+    e = Engine(state=b["state"])
+    e.started_at = b["started_at"]
+    e.duration_ms = b["duration_ms"]
+    e.last_message = b["last_message"]
+    return e
 
 
 def write_state(home, state):
@@ -185,6 +207,94 @@ def write_state(home, state):
     try:
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(state + "\n")
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+# Fields the menu-bar plugin reads. session_meta carries cwd/originator/version;
+# turn_context carries model/effort/approval_policy.
+_META_KEYS = ("cwd", "originator", "cli_version", "model", "effort", "approval_policy")
+
+
+def _blank_meta():
+    return {k: "" for k in _META_KEYS}
+
+
+def update_meta(meta, obj):
+    """Absorb model/project/etc. from a session_meta or turn_context event."""
+    if not isinstance(obj, dict):
+        return
+    t = obj.get("type")
+    p = obj.get("payload")
+    if not isinstance(p, dict):
+        return
+    if t == "session_meta":
+        for k in ("cwd", "originator", "cli_version"):
+            if p.get(k):
+                meta[k] = p[k]
+    elif t == "turn_context":
+        for k in ("cwd", "model", "effort", "approval_policy"):
+            if p.get(k):
+                meta[k] = p[k]
+
+
+def scan_meta(path):
+    """Read a whole rollout for the freshest session_meta + turn_context fields."""
+    meta = _blank_meta()
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    update_meta(meta, json.loads(line))
+                except Exception:
+                    continue
+    except OSError:
+        pass
+    return meta
+
+
+def config_model(home):
+    """Fallback model name from config.toml (root `model = "..."`)."""
+    try:
+        with open(os.path.join(home, "config.toml"), "r", encoding="utf-8") as f:
+            for raw in f:
+                s = raw.strip()
+                if s.startswith("[") :
+                    break
+                if s.startswith("model") and "=" in s:
+                    return s.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return ""
+
+
+def write_status(home, eng, meta):
+    """Write a TAB-separated status file for the menu-bar plugin (atomic)."""
+    model = meta.get("model") or config_model(home)
+    msg = (eng.last_message or "").replace("\n", " ").replace("\t", " ").strip()
+    fields = [
+        ("state", eng.state),
+        ("model", model),
+        ("effort", meta.get("effort", "")),
+        ("approval_policy", meta.get("approval_policy", "")),
+        ("cwd", meta.get("cwd", "")),
+        ("originator", meta.get("originator", "")),
+        ("cli_version", meta.get("cli_version", "")),
+        ("started_at", str(eng.started_at or "")),
+        ("duration_ms", str(eng.duration_ms or "")),
+        ("last_message", msg[:500]),
+        ("updated_at", str(int(time.time()))),
+    ]
+    path = os.path.join(home, "status")
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            for k, v in fields:
+                f.write("%s\t%s\n" % (k, v))
         os.replace(tmp, path)
     except OSError:
         pass
@@ -269,7 +379,7 @@ def run_replay(path):
 
 def run_print_state(home):
     f = newest_rollout(home)
-    print(last_boundary_state(f) if f else IDLE)
+    print(scan_boundary(f)["state"] if f else IDLE)
     return 0
 
 
@@ -280,7 +390,8 @@ def run_loop(home):
     notifier = notifier_path()
 
     cur_path = newest_rollout(home)
-    eng = Engine(state=last_boundary_state(cur_path) if cur_path else IDLE)
+    eng = seed_engine(cur_path) if cur_path else Engine()
+    meta = scan_meta(cur_path) if cur_path else _blank_meta()
     offset = 0
     if cur_path:
         try:
@@ -289,6 +400,7 @@ def run_loop(home):
             offset = 0
     buf = ""
     write_state(home, eng.state)
+    write_status(home, eng, meta)
     last_written = eng.state
     last_beat = _mono()
 
@@ -297,9 +409,10 @@ def run_loop(home):
             newest = newest_rollout(home)
             if newest and newest != cur_path:
                 # A newer session appeared; process it from the beginning so we
-                # catch its completion, but seed state from its boundaries.
+                # catch its completion, but seed state + meta from the file.
                 cur_path = newest
-                eng = Engine(state=last_boundary_state(cur_path))
+                eng = seed_engine(cur_path)
+                meta = scan_meta(cur_path)
                 offset = 0
                 buf = ""
 
@@ -324,9 +437,11 @@ def run_loop(home):
                             o = json.loads(line)
                         except Exception:
                             continue        # hold last state on parse error
+                        update_meta(meta, o)   # keep model/project/etc. current
                         res = eng.feed(o)
                         if res["state"] and res["state"] != last_written:
                             write_state(home, res["state"])
+                            write_status(home, eng, meta)
                             last_written = res["state"]
                         if res["notify"]:
                             tt, bb, kk = res["notify"]
@@ -335,6 +450,7 @@ def run_loop(home):
             now = _mono()
             if now - last_beat >= heartbeat:
                 write_state(home, eng.state)   # liveness heartbeat
+                write_status(home, eng, meta)
                 last_written = eng.state
                 last_beat = now
         except Exception:

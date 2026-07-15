@@ -6,7 +6,10 @@ Native macOS notifications and a menu-bar status indicator for the
 
 - 🔔 **Notification when a turn completes** — title *“Codex — ready for you”*,
   body = the assistant's final message.
-- 🟢🟡🔴 **Menu-bar indicator** — **idle / working / needs approval**, refreshed ~1s.
+- **Menu-bar indicator** — a `</>` Codex glyph, **green idle / amber working / red
+  needs-approval**, with a live **blooming animation** while a turn runs.
+- **Live turn info in the dropdown** — elapsed time, project, model · effort,
+  approval policy, and the last message.
 - 🧩 Installs with one command, uninstalls cleanly, and **never blindly rewrites
   your `~/.codex/config.toml`**.
 
@@ -167,14 +170,25 @@ change. PRs adding version names are welcome.
 ## Usage
 
 Once installed there's nothing to run — the LaunchAgent keeps the watcher alive
-across logins. The menu bar shows:
+across logins. The menu bar shows a `</>` glyph colored by state:
 
-| Icon | Meaning |
-| --- | --- |
-| 🟢 | idle — Codex is waiting for you |
-| 🟡 | working — a turn is in progress |
-| 🔴 | needs approval — Codex is waiting on an approval (if your version emits one) |
-| ⚪ | unknown / watcher not running (state file missing or >30s stale) |
+| Icon | State | Meaning |
+| --- | --- | --- |
+| green `</>` | idle | Codex is waiting for you |
+| amber `</>` + `Working ✿` | working | a turn is in progress (animated bloom) |
+| red `⚠` `Approval` | needs approval | waiting on an approval (if your version emits one) |
+| gray `</>` | unknown / stale | watcher not running (status >30s stale) |
+
+Click it for the dropdown: current state, **elapsed / last-turn time**, **project**,
+**model · effort**, **approval policy**, the **last message** (full text in a
+submenu), and quick actions (open the watcher log, open the sessions folder,
+refresh).
+
+The watcher writes two files the plugin reads: `~/.codex/state` (one word) and
+`~/.codex/status` (TAB-separated details). Changing the logo is a one-line edit
+in [`plugins/codex-status.1s.sh`](plugins/codex-status.1s.sh) — set `ICON=` to any
+[SF Symbol](https://developer.apple.com/sf-symbols/) name (e.g. `terminal.fill`,
+`sparkle`), or swap in your own `image=` (base64 PNG).
 
 ### Configuration (environment variables)
 
