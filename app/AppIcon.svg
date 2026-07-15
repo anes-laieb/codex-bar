@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C63FF"/>
+      <stop offset="1" stop-color="#A64DFF"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e9e2ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="112" y="112" width="800" height="800" rx="180" fill="url(#bg)"/>
+  <rect x="112" y="112" width="800" height="800" rx="180" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="6"/>
+  <!-- 4-point sparkle -->
+  <path fill="url(#spark)" d="M512 236 L565 459 L788 512 L565 565 L512 788 L459 565 L236 512 L459 459 Z"/>
+  <!-- small accent sparkle -->
+  <path fill="#ffffff" fill-opacity="0.85" d="M726 300 L744 366 L810 384 L744 402 L726 468 L708 402 L642 384 L708 366 Z"/>
+</svg>

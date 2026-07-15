@@ -1,8 +1,20 @@
-# codex-macos-status
+# Codex Bar
 
 Native macOS notifications and a menu-bar status indicator for the
 [Codex CLI](https://github.com/openai/codex) — the same "your agent finished" /
 "your agent needs you" feedback you get from Claude Code, but for Codex.
+
+**Install in 3 commands** (macOS, needs Xcode command-line tools):
+
+```sh
+git clone https://github.com/anesTvT/codex-bar.git
+cd codex-bar
+./install-app.sh
+```
+
+That builds **Codex Bar.app**, installs it to `/Applications`, and launches it —
+a sparkle appears in your menu bar. Enable **Launch at Login** from its menu.
+Uninstall = quit it and delete the app. Details below.
 
 - 🔔 **Notification when a turn completes** — title *“Codex — ready for you”*,
   body = the assistant's final message.
@@ -79,8 +91,8 @@ A self-contained menu-bar app. No SwiftBar, no Python, no LaunchAgent — it wat
 the logs itself, shows the icon, animates, and posts notifications.
 
 ```sh
-git clone https://github.com/OWNER/codex-macos-status.git
-cd codex-macos-status
+git clone https://github.com/anesTvT/codex-bar.git
+cd codex-bar
 ./install-app.sh
 ```
 

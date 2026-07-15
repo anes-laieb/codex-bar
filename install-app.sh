@@ -1,13 +1,11 @@
 #!/bin/sh
-# install-app.sh — build & install the standalone Codex Status menu-bar app.
-# This is the self-contained path: no SwiftBar, no Python watcher. It replaces
-# them (and stops them, to avoid duplicate icons/notifications).
+# install-app.sh — build & install the standalone "Codex Bar" menu-bar app.
+# Self-contained: no SwiftBar, no Python watcher. It replaces (and stops) them.
 #
 # Usage: ./install-app.sh
 set -eu
 
 DIR=$(cd "$(dirname "$0")" && pwd)
-CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 GUI="gui/$(id -u)"
 WATCHER_LABEL="com.codex-macos-status.watcher"
 
@@ -15,14 +13,13 @@ WATCHER_LABEL="com.codex-macos-status.watcher"
 
 echo "==> building the app"
 sh "$DIR/app/build.sh" "$DIR/app/build"
-SRC="$DIR/app/build/CodexStatus.app"
+SRC="$DIR/app/build/Codex Bar.app"
 
 echo "==> stopping the SwiftBar/Python path (avoids duplicates)"
 launchctl bootout "$GUI/$WATCHER_LABEL" 2>/dev/null || true
-# remove our SwiftBar plugin if present, in current + configured plugin dirs
 rm -f "$HOME/.swiftbar/codex-status.1s.sh" 2>/dev/null || true
-for app in com.ameba.SwiftBar com.xbarapp.app; do
-  d=$(defaults read "$app" PluginDirectory 2>/dev/null || true)
+for a in com.ameba.SwiftBar com.xbarapp.app; do
+  d=$(defaults read "$a" PluginDirectory 2>/dev/null || true)
   [ -n "$d" ] && rm -f "$d/codex-status.1s.sh" 2>/dev/null || true
 done
 
@@ -30,16 +27,21 @@ echo "==> installing the app"
 DEST_DIR="/Applications"
 [ -w "$DEST_DIR" ] || DEST_DIR="$HOME/Applications"
 mkdir -p "$DEST_DIR"
-rm -rf "$DEST_DIR/CodexStatus.app"
+# Remove any previous build (old name too) in both common locations.
+killall CodexBar CodexStatus 2>/dev/null || true
+for loc in "/Applications" "$HOME/Applications"; do
+  rm -rf "$loc/CodexStatus.app" "$loc/Codex Bar.app" 2>/dev/null || true
+done
 cp -R "$SRC" "$DEST_DIR/"
-DEST="$DEST_DIR/CodexStatus.app"
+DEST="$DEST_DIR/Codex Bar.app"
+# Don't leave a second copy in the repo for Spotlight/Launchpad to index.
+rm -rf "$DIR/app/build"
 
 echo "==> launching"
-killall CodexStatus 2>/dev/null || true   # relaunch the freshly built binary
 open "$DEST"
 
 echo ""
-echo "Done. 'Codex Status' is running in your menu bar (look for the sparkle icon)."
+echo "Done. 'Codex Bar' is running in your menu bar (look for the sparkle icon)."
 echo "  • App: $DEST"
 echo "  • Enable 'Launch at Login' from its menu to keep it across restarts."
-echo "  • Quit from its menu; delete $DEST to uninstall."
+echo "  • Uninstall: quit it from its menu, then delete \"$DEST\"."
