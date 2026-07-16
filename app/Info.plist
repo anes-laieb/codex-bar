@@ -11,7 +11,6 @@
     <key>CFBundleShortVersionString</key><string>1.0.0</string>
     <key>CFBundlePackageType</key>     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>  <string>13.0</string>
-    <key>LSUIElement</key>             <true/>
     <key>NSHumanReadableCopyright</key><string>Apache-2.0 · Codex Bar contributors</string>
 </dict>
 </plist>

@@ -1,9 +1,9 @@
-// CodexStatus — a standalone macOS menu-bar app for the Codex CLI.
+// Codex Bar — a standalone macOS app for the Codex CLI.
 //
-// Watches ~/.codex/sessions/**/rollout-*.jsonl itself (no SwiftBar, no Python),
-// shows a status-bar icon colored by state (green idle / amber working / red
-// needs-approval), animates a cycling word + flower while a turn runs, offers a
-// completion-sound toggle, and posts a notification when a turn finishes.
+// Full app: a Dock icon + a window that opens on launch, AND a solid menu-bar
+// status icon (icon-only, fixed width, colored by state so it never jitters).
+// It watches ~/.codex/sessions/**/rollout-*.jsonl itself (no SwiftBar, no
+// Python), and posts a notification when a turn finishes.
 //
 // Build: app/build.sh   ·   Install: install-app.sh
 
@@ -19,7 +19,7 @@ enum CxState: String {
     case unknown
 }
 
-// MARK: - Log watcher (self-contained; mirrors the Python codex-watch logic)
+// MARK: - Log watcher (self-contained)
 
 final class Watcher {
     let home: URL
@@ -41,9 +41,9 @@ final class Watcher {
     var sessions: URL { home.appendingPathComponent("sessions") }
 
     func newest() -> URL? {
-        let keys: [URLResourceKey] = [.contentModificationDateKey]
-        guard let en = FileManager.default.enumerator(at: sessions, includingPropertiesForKeys: keys,
-                                                       options: [.skipsHiddenFiles]) else { return nil }
+        guard let en = FileManager.default.enumerator(at: sessions,
+              includingPropertiesForKeys: [.contentModificationDateKey],
+              options: [.skipsHiddenFiles]) else { return nil }
         var best: URL?
         var bestDate = Date.distantPast
         for case let url as URL in en where url.lastPathComponent.hasPrefix("rollout-") && url.pathExtension == "jsonl" {
@@ -65,7 +65,6 @@ final class Watcher {
         }
     }
 
-    // Apply one event. Returns true if a turn just COMPLETED (for notifications).
     @discardableResult
     private func handle(_ line: String) -> Bool {
         guard let data = line.data(using: .utf8),
@@ -93,16 +92,14 @@ final class Watcher {
         return false
     }
 
-    // Scan a whole file to seed state + info; set offset to EOF (skip history).
     func seed(_ url: URL) {
-        state = .idle; startedAt = nil; durationMs = nil; lastMessage = ""
-        buffer = ""
+        state = .idle; startedAt = nil; durationMs = nil; lastMessage = ""; buffer = ""
         if let text = try? String(contentsOf: url, encoding: .utf8) {
             for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
                 _ = handle(String(line))
             }
         }
-        offset = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? UInt64 ?? 0) ?? 0
+        offset = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? UInt64) ?? 0
         path = url
     }
 
@@ -121,13 +118,9 @@ final class Watcher {
         return lines
     }
 
-    // Poll for changes. Returns true if a turn completed live (fire a notification).
     func poll() -> Bool {
         guard let n = newest() else { return false }
-        if n != path {
-            seed(n)          // switched sessions: reflect state, don't re-notify history
-            return false
-        }
+        if n != path { seed(n); return false }
         var completed = false
         for line in readNewLines(n) where !line.trimmingCharacters(in: .whitespaces).isEmpty {
             if handle(line) { completed = true }
@@ -143,44 +136,111 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let watcher: Watcher
     private var timer: Timer?
     private var frame = 0
-    private var lastColor: NSColor?
+    private var lastImageKey = ""
+
+    private var window: NSWindow!
+    private var statusField: NSTextField!
+    private var soundCheck: NSButton!
+    private var loginCheck: NSButton!
 
     private let icon = "sparkle"
     private let words = ["Thinking", "Cooking", "Prompting", "Brewing", "Reasoning",
                          "Crunching", "Pondering", "Plotting", "Noodling", "Simmering",
                          "Vibing", "Scheming"]
-    private let flowers = ["✿", "❀", "✾", "❁", "❋", "✾", "❀"]
 
     override init() {
-        let home = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")
-        watcher = Watcher(home: home)
+        watcher = Watcher(home: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex"))
         super.init()
     }
 
     func applicationDidFinishLaunching(_ note: Notification) {
         UserDefaults.standard.register(defaults: ["completionSound": true])
+        NSApp.setActivationPolicy(.regular)      // full app: Dock icon
+        buildMainMenu()
+        buildStatusItem()
+        buildWindow()
+        if let n = watcher.newest() { watcher.seed(n) }
+        render()
+        updateWindow()
+        showWindow()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.tick() }
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { false }
+    func applicationShouldHandleReopen(_ s: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        showWindow(); return true
+    }
+
+    // MARK: build
+
+    private func buildMainMenu() {
+        let main = NSMenu()
+        let appItem = NSMenuItem()
+        main.addItem(appItem)
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "Show Codex Bar", action: #selector(showWindow), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Quit Codex Bar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+        NSApp.mainMenu = main
+    }
+
+    private func buildStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.imagePosition = .imageOnly     // icon only → fixed width, no jitter
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
-
-        if let n = watcher.newest() { watcher.seed(n) }
-        render()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            self?.tick()
-        }
     }
+
+    private func buildWindow() {
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 380, height: 340),
+                          styleMask: [.titled, .closable, .miniaturizable],
+                          backing: .buffered, defer: false)
+        window.title = "Codex Bar"
+        window.isReleasedWhenClosed = false
+        let content = NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 340))
+
+        statusField = NSTextField(wrappingLabelWithString: "")
+        statusField.frame = NSRect(x: 20, y: 96, width: 340, height: 224)
+        statusField.isSelectable = true
+        content.addSubview(statusField)
+
+        soundCheck = NSButton(checkboxWithTitle: "Play completion sound",
+                              target: self, action: #selector(toggleSound))
+        soundCheck.frame = NSRect(x: 20, y: 62, width: 340, height: 22)
+        content.addSubview(soundCheck)
+
+        loginCheck = NSButton(checkboxWithTitle: "Launch at login",
+                              target: self, action: #selector(toggleLogin))
+        loginCheck.frame = NSRect(x: 20, y: 36, width: 340, height: 22)
+        content.addSubview(loginCheck)
+
+        let footer = NSTextField(labelWithString: "Watches ~/.codex/sessions")
+        footer.frame = NSRect(x: 20, y: 12, width: 340, height: 16)
+        footer.textColor = .tertiaryLabelColor
+        footer.font = .systemFont(ofSize: 10)
+        content.addSubview(footer)
+
+        window.contentView = content
+        window.center()
+    }
+
+    @objc private func showWindow() {
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: tick / render
 
     private func tick() {
         frame += 1
-        if frame % 3 == 0 {          // poll the log ~every 0.9s
-            if watcher.poll() { notifyDone() }
-        }
+        if watcher.poll() { notifyDone() }
         render()
+        if window.isVisible { updateWindow() }
     }
 
-    private func color() -> NSColor {
+    private func baseColor() -> NSColor {
         switch watcher.state {
         case .idle: return .systemGreen
         case .working: return .systemYellow
@@ -189,13 +249,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // Menu-bar icon: solid, icon-only. "working" gently pulses COLOR only (no
+    // width change), so the item never resizes or hides.
     private func render() {
         guard let button = statusItem.button else { return }
-        let c = color()
-        // Rebuild the icon in the state color (bold, NON-template so the color
-        // actually shows — a template image would render menu-bar white).
-        if lastColor != c {
-            lastColor = c
+        var c = baseColor()
+        if watcher.state == .working, frame % 2 == 0 {
+            c = c.blended(withFraction: 0.45, of: .white) ?? c
+        }
+        let key = "\(watcher.state.rawValue)-\(c.hashValue)"
+        if key != lastImageKey {
+            lastImageKey = key
             let cfg = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
                 .applying(NSImage.SymbolConfiguration(paletteColors: [c]))
             let img = NSImage(systemSymbolName: icon, accessibilityDescription: "Codex")?
@@ -203,24 +267,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             img?.isTemplate = false
             button.image = img
         }
-        var title = ""
+        button.imagePosition = .imageOnly
+    }
+
+    private func fmtDur(_ s: Int) -> String { s >= 60 ? "\(s / 60)m \(s % 60)s" : "\(s)s" }
+
+    private func stateLabel() -> String {
         switch watcher.state {
-        case .working:
-            let w = words[(frame / 8) % words.count]
-            let f = flowers[frame % flowers.count]
-            title = " \(w) \(f)"
-        case .needsApproval:
-            title = " Approval"
-        default:
-            title = ""
+        case .idle: return "idle"
+        case .working: return "working"
+        case .needsApproval: return "needs approval"
+        case .unknown: return "unknown"
         }
-        if title.isEmpty {
-            button.attributedTitle = NSAttributedString(string: "")
+    }
+
+    // Composed status text (used in the window). Words animate here, where width
+    // doesn't matter — the menu bar stays solid.
+    private func statusText() -> NSAttributedString {
+        let out = NSMutableAttributedString()
+        let c = baseColor()
+        out.append(NSAttributedString(string: "Codex — \(stateLabel())\n",
+            attributes: [.foregroundColor: c, .font: NSFont.boldSystemFont(ofSize: 16)]))
+        if watcher.state == .working {
+            let w = words[(frame / 3) % words.count]
+            out.append(NSAttributedString(string: "\(w)…\n",
+                attributes: [.foregroundColor: c, .font: NSFont.systemFont(ofSize: 13)]))
+        }
+        var lines: [String] = []
+        if watcher.state == .working, let s = watcher.startedAt {
+            lines.append("Running for \(fmtDur(Int(Date().timeIntervalSince1970 - s)))")
+        } else if let d = watcher.durationMs {
+            lines.append("Last turn: \(fmtDur(Int(d / 1000)))")
+        }
+        if !watcher.cwd.isEmpty { lines.append("Project: \((watcher.cwd as NSString).lastPathComponent)") }
+        if !watcher.model.isEmpty {
+            lines.append("Model: \(watcher.model)" + (watcher.effort.isEmpty ? "" : "  ·  \(watcher.effort)"))
+        }
+        if !watcher.approval.isEmpty { lines.append("Approvals: \(watcher.approval)") }
+        if !lines.isEmpty {
+            out.append(NSAttributedString(string: lines.joined(separator: "\n") + "\n",
+                attributes: [.foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.systemFont(ofSize: 12)]))
+        }
+        if !watcher.lastMessage.isEmpty {
+            let m = String(watcher.lastMessage.prefix(280))
+            out.append(NSAttributedString(string: "\n" + m,
+                attributes: [.foregroundColor: NSColor.tertiaryLabelColor, .font: NSFont.systemFont(ofSize: 12)]))
+        }
+        return out
+    }
+
+    private func updateWindow() {
+        statusField.attributedStringValue = statusText()
+        soundCheck.state = UserDefaults.standard.bool(forKey: "completionSound") ? .on : .off
+        if #available(macOS 13.0, *) {
+            loginCheck.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
+            loginCheck.isHidden = false
         } else {
-            button.attributedTitle = NSAttributedString(
-                string: title,
-                attributes: [.foregroundColor: c,
-                             .font: NSFont.systemFont(ofSize: NSFont.systemFontSize - 1)])
+            loginCheck.isHidden = true
         }
     }
 
@@ -239,16 +342,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         try? p.run()
     }
 
-    private func fmtDur(_ s: Int) -> String { s >= 60 ? "\(s / 60)m \(s % 60)s" : "\(s)s" }
-
-    private func label() -> String {
-        switch watcher.state {
-        case .idle: return "idle"
-        case .working: return "working"
-        case .needsApproval: return "needs approval"
-        case .unknown: return "unknown"
-        }
-    }
+    // MARK: status-item menu
 
     private func info(_ menu: NSMenu, _ text: String) {
         let item = NSMenuItem(title: text, action: nil, keyEquivalent: "")
@@ -258,13 +352,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        let head = NSMenuItem(title: "Codex — \(label())", action: nil, keyEquivalent: "")
+        let head = NSMenuItem(title: "Codex — \(stateLabel())", action: nil, keyEquivalent: "")
         head.isEnabled = false
-        head.attributedTitle = NSAttributedString(
-            string: "Codex — \(label())",
-            attributes: [.foregroundColor: color(), .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)])
+        head.attributedTitle = NSAttributedString(string: "Codex — \(stateLabel())",
+            attributes: [.foregroundColor: baseColor(), .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)])
         menu.addItem(head)
-
         if watcher.state == .working, let s = watcher.startedAt {
             info(menu, "Running for \(fmtDur(Int(Date().timeIntervalSince1970 - s)))")
         } else if let d = watcher.durationMs {
@@ -274,59 +366,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !watcher.model.isEmpty {
             info(menu, "Model: \(watcher.model)" + (watcher.effort.isEmpty ? "" : "  ·  \(watcher.effort)"))
         }
-        if !watcher.approval.isEmpty { info(menu, "Approvals: \(watcher.approval)") }
-        if !watcher.lastMessage.isEmpty {
-            menu.addItem(.separator())
-            let m = watcher.lastMessage
-            info(menu, String(m.prefix(64)) + (m.count > 64 ? "…" : ""))
-        }
-
         menu.addItem(.separator())
+        let open = NSMenuItem(title: "Open Codex Bar Window", action: #selector(showWindow), keyEquivalent: "")
+        open.target = self; menu.addItem(open)
         let snd = NSMenuItem(title: "Completion sound", action: #selector(toggleSound), keyEquivalent: "")
         snd.target = self
         snd.state = UserDefaults.standard.bool(forKey: "completionSound") ? .on : .off
         menu.addItem(snd)
-
         if #available(macOS 13.0, *) {
             let li = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
             li.target = self
             li.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
             menu.addItem(li)
         }
-
         menu.addItem(.separator())
-        let open = NSMenuItem(title: "Open Sessions Folder", action: #selector(openSessions), keyEquivalent: "")
-        open.target = self
-        menu.addItem(open)
-        let quit = NSMenuItem(title: "Quit Codex Status", action: #selector(quitApp), keyEquivalent: "q")
-        quit.target = self
+        let quit = NSMenuItem(title: "Quit Codex Bar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
     }
 
     @objc private func toggleSound() {
         let d = UserDefaults.standard
         d.set(!d.bool(forKey: "completionSound"), forKey: "completionSound")
+        updateWindow()
     }
 
     @available(macOS 13.0, *)
     @objc private func toggleLogin() {
         let svc = SMAppService.mainApp
-        do {
-            if svc.status == .enabled { try svc.unregister() } else { try svc.register() }
-        } catch { NSSound.beep() }
-    }
-
-    @objc private func openSessions() {
-        NSWorkspace.shared.open(watcher.sessions)
-    }
-
-    @objc private func quitApp() {
-        NSApp.terminate(nil)
+        do { if svc.status == .enabled { try svc.unregister() } else { try svc.register() } }
+        catch { NSSound.beep() }
+        updateWindow()
     }
 }
 
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.accessory)   // menu-bar only, no Dock icon
 app.run()
