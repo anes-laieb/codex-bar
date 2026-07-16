@@ -249,10 +249,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    // Menu-bar icon: SOLID and icon-only. Constant color per state, rebuilt only
-    // when the state actually changes — no per-tick redraw, no pulsing, no width
-    // change, so it never dims, flickers, or hides. (Animation lives in the
-    // window, where width doesn't matter.)
+    // Menu-bar item: SOLID icon (rebuilt only on state change) + a cycling word
+    // while working. The word uses a MONOSPACED font padded to a constant length,
+    // so the item's width never changes — that width oscillation was what made it
+    // resize and flicker/hide in a full menu bar. Constant width => rock steady.
     private func render() {
         guard let button = statusItem.button else { return }
         let key = watcher.state.rawValue
@@ -265,7 +265,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             img?.isTemplate = false
             button.image = img
         }
-        button.imagePosition = .imageOnly
+        let mono = NSFont.monospacedSystemFont(ofSize: 12, weight: .medium)
+        switch watcher.state {
+        case .working:
+            // pad every word to 9 chars so the pixel width is identical each tick
+            let w = words[(frame / 3) % words.count].padding(toLength: 9, withPad: " ", startingAt: 0)
+            button.attributedTitle = NSAttributedString(string: " \(w)",
+                attributes: [.foregroundColor: baseColor(), .font: mono])
+            button.imagePosition = .imageLeading
+        case .needsApproval:
+            button.attributedTitle = NSAttributedString(string: " approval ",
+                attributes: [.foregroundColor: baseColor(), .font: mono])
+            button.imagePosition = .imageLeading
+        default:
+            button.attributedTitle = NSAttributedString(string: "")
+            button.imagePosition = .imageOnly
+        }
     }
 
     private func fmtDur(_ s: Int) -> String { s >= 60 ? "\(s / 60)m \(s % 60)s" : "\(s)s" }
