@@ -249,19 +249,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    // Menu-bar icon: solid, icon-only. "working" gently pulses COLOR only (no
-    // width change), so the item never resizes or hides.
+    // Menu-bar icon: SOLID and icon-only. Constant color per state, rebuilt only
+    // when the state actually changes — no per-tick redraw, no pulsing, no width
+    // change, so it never dims, flickers, or hides. (Animation lives in the
+    // window, where width doesn't matter.)
     private func render() {
         guard let button = statusItem.button else { return }
-        var c = baseColor()
-        if watcher.state == .working, frame % 2 == 0 {
-            c = c.blended(withFraction: 0.45, of: .white) ?? c
-        }
-        let key = "\(watcher.state.rawValue)-\(c.hashValue)"
+        let key = watcher.state.rawValue
         if key != lastImageKey {
             lastImageKey = key
             let cfg = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
-                .applying(NSImage.SymbolConfiguration(paletteColors: [c]))
+                .applying(NSImage.SymbolConfiguration(paletteColors: [baseColor()]))
             let img = NSImage(systemSymbolName: icon, accessibilityDescription: "Codex")?
                 .withSymbolConfiguration(cfg)
             img?.isTemplate = false
