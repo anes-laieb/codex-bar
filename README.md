@@ -25,7 +25,7 @@ and you get a **native notification** the moment a turn finishes. Like the
 ## Install (one command)
 
 ```sh
-git clone https://github.com/anesTvT/codex-bar.git && cd codex-bar && ./install-app.sh
+git clone https://github.com/anes-laieb/codex-bar.git && cd codex-bar && ./install-app.sh
 ```
 
 That builds **Codex Bar.app**, puts it in `/Applications`, and launches it. A sparkle

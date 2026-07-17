@@ -1,0 +1,5 @@
+# Codex Bar is a Swift macOS app. The shell installers and the Python
+# config helper are tooling, not the product — exclude them from GitHub's
+# language stats so the repo is correctly detected as Swift.
+*.sh   linguist-vendored
+*.py   linguist-vendored
