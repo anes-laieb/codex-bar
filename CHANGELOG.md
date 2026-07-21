@@ -28,6 +28,9 @@ the application bundle version.
 - Replaced the former sparkle status treatment with supplied Codex status artwork.
 - Updated the app icon pipeline and bundled the new status assets.
 - Updated installation output and user documentation for the new experience.
+- Added a product-focused README with branded artwork and an application preview.
+- Added a validated release-packaging workflow with architecture-specific archives and
+  SHA-256 checksums.
 
 ### Privacy
 

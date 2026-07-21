@@ -18,6 +18,8 @@ echo "==> compiling"
 "$SWIFTC" -swift-version 5 -O "$DIR/CodexStatus.swift" -o "$APP/Contents/MacOS/CodexBar"
 cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 cp -R "$DIR/StatusAssets" "$APP/Contents/Resources/"
+cp "$DIR/../LICENSE" "$APP/Contents/Resources/LICENSE"
+cp "$DIR/../NOTICE" "$APP/Contents/Resources/NOTICE"
 
 # App icon: build an iconset from the supplied app-logo artwork.
 if command -v qlmanage >/dev/null 2>&1 && command -v iconutil >/dev/null 2>&1 && command -v sips >/dev/null 2>&1; then

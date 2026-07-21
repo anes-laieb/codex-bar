@@ -68,9 +68,13 @@ Then test the built application manually:
 1. Update both version values in `app/Info.plist`.
 2. Move the release notes from `Unreleased` into a dated section in `CHANGELOG.md`.
 3. Run the verification commands and manual test matrix above.
-4. Confirm `git status` contains no build output or private session material.
-5. Tag the reviewed commit with the same version prefixed by `v`.
-6. Publish release notes and confirm the in-app update check sees the new release.
+4. Build the release archive and checksum with `scripts/package-release.sh`.
+5. Confirm the archive architecture, minimum macOS version, signature type, bundled
+   `LICENSE`/`NOTICE`, and checksum are described accurately in the release notes.
+6. Confirm `git status` contains no build output or private session material.
+7. Tag the reviewed commit with the same version prefixed by `v`.
+8. Publish the ZIP and `.sha256` file together, then confirm the in-app update check sees
+   the new release.
 
 ## Design constraints
 

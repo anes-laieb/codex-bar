@@ -1,37 +1,92 @@
-# Codex Bar
+<p align="center">
+  <img src="app/StatusAssets/app-logo.png" width="112" alt="Codex Bar app icon">
+</p>
 
-A native macOS **menu-bar companion for [Codex](https://github.com/openai/codex)**.
-Know at a glance whether Codex is **working** or **waiting for you**, then jump directly
-to any open task.
+<h1 align="center">Codex Bar</h1>
 
-![Codex Bar menu-bar states, window, and a turn-complete notification](docs/demo.svg)
+<p align="center">
+  <strong>Every Codex task. One beautifully calm place.</strong><br>
+  A native macOS menu-bar companion that shows what Codex is doing,<br>
+  tells you when it needs you, and opens the exact task in one click.
+</p>
 
-> The image is a mockup. To add a real screen recording, see [docs/CAPTURE.md](docs/CAPTURE.md).
+<p align="center">
+  <a href="../../releases/latest"><img alt="Release 2.1.8" src="https://img.shields.io/badge/release-v2.1.8-60a5fa?style=flat-square"></a>
+  <img alt="macOS 13 or newer" src="https://img.shields.io/badge/macOS-13%2B-111827?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Native Swift" src="https://img.shields.io/badge/native-Swift-f97316?style=flat-square&logo=swift&logoColor=white">
+  <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-22c55e?style=flat-square"></a>
+</p>
 
----
+<p align="center">
+  <img src="docs/assets/codex-bar-hero.png" width="100%" alt="Codex Bar bringing multiple live Codex tasks into one calm status center">
+</p>
 
-## What it does
+<p align="center">
+  <a href="../../releases/latest"><strong>Download the latest release</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#build-from-source"><strong>Build from source</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="docs/ARCHITECTURE.md"><strong>Explore the architecture</strong></a>
+</p>
 
-- **All currently open sessions** in one window, named as `project / session` from their working-directory path.
-- **Click any session** to open that exact task in the Codex app through its native `codex://threads/{id}` route.
-- **Pin, mute, or hide sessions** from the window's context menu. Hidden sessions can be restored from the menu bar.
-- **A polished icon-led menu** with live state, session switching, recent activity, preferences, updates, and no UI shadows.
-- **Animated live activity text** (`Thinking.`, `Thinking..`, `Thinking...`) beside the menu-bar icon, with an optional elapsed timer and pixel-stable icon/timer/word positions.
-- **Codex status artwork** with the Codex logo while idle and the supplied 121-frame GIF animation at its native 0.03-second frame cadence while working.
-- **Transparent application artwork** that naturally follows the Light or Dark system/Dock background, plus an icon-only “Sky blue” appearance: supplied full-color artwork while idle and a sky-blue GIF while working.
-- **Live menu tracking** keeps the icon, activity dots, and session timers moving while the menu is open.
-- **Native actionable notifications** with “Open Task” and “Mute Session” actions.
-- **Distinct configurable sounds** for completion and questions, including preview controls and scheduled quiet hours.
-- **A sky-blue question indicator** with a pending-question count when multiple tasks need attention.
-- **Recent activity history** for completed turns and questions.
-- **Automatic release checks** with a manual check available from the menu.
-- **A redesigned window and optional Dock icon** showing state, elapsed time, project/session, model, effort, and all preferences.
-- **Launch at Login** support.
-- **No config, no daemon, no `notify` hook.** It just reads Codex's own session logs, so it can't break your Codex setup and never edits `~/.codex/config.toml`.
+> [!NOTE]
+> The hero is a product illustration. The interface preview below comes from the real
+> application, with demo-safe session names substituted for private task text.
 
----
+## Your Codex control center
 
-## Install (one command)
+<table>
+  <tr>
+    <td width="33%" valign="top"><strong>See everything live</strong><br><br>Follow every currently open Codex task, including its state, elapsed time, model, effort, project, and session.</td>
+    <td width="33%" valign="top"><strong>Jump to the right task</strong><br><br>Open an exact conversation through its native <code>codex://threads/{id}</code> route—no searching and no stale context.</td>
+    <td width="33%" valign="top"><strong>Be interrupted intelligently</strong><br><br>Separate completion and question alerts, per-session mute controls, actionable notifications, and scheduled quiet hours.</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/assets/app-window.png" width="760" alt="Codex Bar sessions window showing active tasks, recent activity, and preferences">
+</p>
+
+### Designed around the way agents actually work
+
+- **Multiple active sessions**, sorted by what needs attention first.
+- **Pin, mute, hide, and restore** controls for individual tasks.
+- **Animated live activity** with a stable timer and playful thinking verbs.
+- **Actionable notifications** with **Open Task** and **Mute Session** buttons.
+- **Recent activity and weekly usage** without leaving the menu bar.
+- **Separate completion and question sounds**, previews, and quiet hours.
+- **System and Sky Blue appearances**, plus optional Dock visibility.
+- **Automatic release checks** that never install anything without you.
+- **No daemon and no Codex configuration edits.** The native app only reads Codex's
+  local thread index and rollout logs.
+
+### Artwork that stays alive
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="app/StatusAssets/app-logo.png" width="86" alt="Codex Bar idle icon"><br><strong>Idle</strong><br><sub>Everything is caught up</sub></td>
+    <td align="center" width="33%"><img src="app/StatusAssets/codex-animation.gif" width="86" alt="Animated Codex Bar working icon"><br><strong>Working</strong><br><sub>One or more tasks are active</sub></td>
+    <td align="center" width="33%"><img src="app/StatusAssets/colored-idle.png" width="86" alt="Codex Bar Sky Blue appearance"><br><strong>Sky Blue</strong><br><sub>An optional color-forward appearance</sub></td>
+  </tr>
+</table>
+
+## Install
+
+### Download the app
+
+Download the Apple silicon build and its checksum from the
+[latest GitHub release](../../releases/latest), verify it, unzip it, and move
+**Codex Bar.app** into `/Applications`.
+
+```sh
+shasum -a 256 -c Codex-Bar-2.1.8-macOS-arm64.zip.sha256
+```
+
+The downloadable build is ad-hoc signed and is not Apple-notarized. On first launch,
+macOS may ask you to confirm it through **Control-click → Open**. The release notes state
+the exact architecture, minimum macOS version, signature, checksum, and source commit.
+
+### Build from source
 
 ```sh
 git clone https://github.com/anes-laieb/codex-bar.git && cd codex-bar && ./install-app.sh
@@ -45,8 +100,6 @@ always there.
 run `xcode-select --install` once). macOS 13+.
 
 That's it. No Homebrew or extra apps are required.
-
----
 
 ## Using it
 
@@ -65,8 +118,6 @@ That's it. No Homebrew or extra apps are required.
 ### Uninstall
 
 Quit it from its menu (or the window), then drag **`/Applications/Codex Bar.app`** to the Trash. Nothing else is left behind.
-
----
 
 ## How it works
 
@@ -89,8 +140,6 @@ across Codex versions. Tested against `codex-cli 0.144.2`.
 
 > If a future Codex release changes these events, please [open an issue](https://github.com/anes-laieb/codex-bar/issues/new/choose)
 > with the Codex version, the behavior you observed, and safe reproduction details.
-
----
 
 ## Advanced: SwiftBar/xbar plugin (optional)
 
