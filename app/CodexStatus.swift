@@ -4,6 +4,7 @@
 // non-archived session list; rollout events provide live state and notifications.
 
 import AppKit
+import CryptoKit
 import Foundation
 import ImageIO
 import ServiceManagement
@@ -55,6 +56,39 @@ struct UsageSnapshot {
     let resetsAt: Date
 
     var remainingPercent: Int { max(0, 100 - usedPercent) }
+}
+
+struct ReleaseAsset {
+    let name: String
+    let downloadURL: URL
+    let size: Int64
+    let sha256: String
+}
+
+struct AvailableUpdate {
+    let version: String
+    let releaseURL: URL?
+    let asset: ReleaseAsset
+}
+
+enum SoftwareUpdateError: LocalizedError {
+    case downloadFailed
+    case verificationFailed(String)
+    case extractionFailed
+    case invalidBundle(String)
+    case installationUnavailable(String)
+    case installationFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .downloadFailed: return "The update could not be downloaded."
+        case .verificationFailed(let reason): return "The update failed verification: \(reason)"
+        case .extractionFailed: return "The downloaded update could not be extracted."
+        case .invalidBundle(let reason): return "The downloaded app is invalid: \(reason)"
+        case .installationUnavailable(let reason): return reason
+        case .installationFailed(let reason): return "The update could not be installed: \(reason)"
+        }
+    }
 }
 
 final class SessionTracker {
@@ -424,7 +458,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
     private var history: [HistoryEntry] = []
     private var latestVersion: String?
     private var updateURL: URL?
+    private var availableUpdate: AvailableUpdate?
     private var updateCheckInFlight = false
+    private var updateInstallInFlight = false
+    private var updateDownloadTask: URLSessionDownloadTask?
+    private var updateTemporaryDirectory: URL?
+    private var updateProgressWindow: NSWindow?
+    private var updateProgressIndicator: NSProgressIndicator?
+    private var updateProgressLabel: NSTextField?
+    private var updateCancelButton: NSButton?
     private var weeklyUsage: UsageSnapshot?
     private var usageRefreshInFlight = false
     private var lastUsageRefresh = Date.distantPast
@@ -457,6 +499,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
             "showInDock": true,
             "statusAppearance": "system"
         ])
+        cleanupStaleUpdateBackups()
         loadHistory()
         configureNotifications()
         applyDockVisibility(UserDefaults.standard.bool(forKey: "showInDock"))
@@ -995,6 +1038,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
 
     private func tick() {
         animationFrame += 1
+        updateDownloadProgress()
         refreshWeeklyUsage()
         for (session, signal) in store.poll() {
             switch signal {
@@ -1537,17 +1581,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         candidate.compare(current, options: .numeric) == .orderedDescending
     }
 
+    private var releaseArchitecture: String {
+        #if arch(arm64)
+        return "arm64"
+        #elseif arch(x86_64)
+        return "x86_64"
+        #else
+        return "unsupported"
+        #endif
+    }
+
     private func checkForUpdates(silent: Bool) {
         guard !updateCheckInFlight,
               let url = URL(string: "https://api.github.com/repos/anes-laieb/codex-bar/releases/latest") else { return }
         updateCheckInFlight = true
         var request = URLRequest(url: url)
         request.setValue("Codex-Bar", forHTTPHeaderField: "User-Agent")
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.updateCheckInFlight = false
-                guard error == nil, let data,
+                guard error == nil,
+                      (response as? HTTPURLResponse)?.statusCode == 200,
+                      let data,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let tag = json["tag_name"] as? String else {
                     if !silent { self.showUpdateResult("Could not check for updates.") }
@@ -1558,13 +1614,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
                 if self.isVersion(version, newerThan: current) {
                     self.latestVersion = version
                     self.updateURL = (json["html_url"] as? String).flatMap(URL.init(string:))
-                    if !silent { self.showUpdateResult("Codex Bar \(version) is available.") }
+                    self.availableUpdate = self.parseAvailableUpdate(version: version, json: json)
+                    if !silent {
+                        let message = self.availableUpdate == nil
+                            ? "Codex Bar \(version) is available, but no compatible verified package was found."
+                            : "Codex Bar \(version) is available and ready to install."
+                        self.showUpdateResult(message)
+                    }
                 } else if !silent {
                     self.showUpdateResult("You are using the latest version.")
                 }
                 self.updateWindow(force: true)
             }
         }.resume()
+    }
+
+    private func parseAvailableUpdate(version: String, json: [String: Any]) -> AvailableUpdate? {
+        let expectedName = "Codex-Bar-\(version)-macOS-\(releaseArchitecture).zip"
+        guard let assets = json["assets"] as? [[String: Any]],
+              let jsonAsset = assets.first(where: { $0["name"] as? String == expectedName }),
+              let download = jsonAsset["browser_download_url"] as? String,
+              let downloadURL = URL(string: download),
+              downloadURL.scheme == "https", downloadURL.host == "github.com",
+              let digest = jsonAsset["digest"] as? String,
+              digest.lowercased().hasPrefix("sha256:") else { return nil }
+        let hash = String(digest.dropFirst("sha256:".count)).lowercased()
+        guard hash.count == 64, hash.allSatisfy({ $0.isHexDigit }) else { return nil }
+        let size = (jsonAsset["size"] as? NSNumber)?.int64Value ?? 0
+        guard size > 0, size <= 200 * 1_024 * 1_024 else { return nil }
+        let asset = ReleaseAsset(name: expectedName, downloadURL: downloadURL,
+                                 size: size, sha256: hash)
+        return AvailableUpdate(version: version, releaseURL: updateURL, asset: asset)
     }
 
     private func showUpdateResult(_ message: String) {
@@ -1579,7 +1659,316 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
     @objc private func checkForUpdatesNow() { checkForUpdates(silent: false) }
 
     @objc private func openAvailableUpdate() {
-        if let updateURL { NSWorkspace.shared.open(updateURL) }
+        guard let update = availableUpdate else {
+            if let updateURL { NSWorkspace.shared.open(updateURL) }
+            return
+        }
+        beginInstalling(update)
+    }
+
+    private func beginInstalling(_ update: AvailableUpdate) {
+        guard !updateInstallInFlight else {
+            updateProgressWindow?.makeKeyAndOrderFront(nil)
+            return
+        }
+        do {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("CodexBarUpdate-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            updateTemporaryDirectory = directory
+        } catch {
+            showUpdateFailure(SoftwareUpdateError.installationFailed(error.localizedDescription))
+            return
+        }
+
+        updateInstallInFlight = true
+        showUpdateProgress(version: update.version)
+        setUpdateStage("Downloading Codex Bar \(update.version)…", indeterminate: false)
+        var request = URLRequest(url: update.asset.downloadURL)
+        request.setValue("Codex-Bar", forHTTPHeaderField: "User-Agent")
+        let destination = updateTemporaryDirectory!.appendingPathComponent(update.asset.name)
+        let task = URLSession.shared.downloadTask(with: request) { [weak self] location, response, error in
+            guard let self else { return }
+            guard error == nil,
+                  (response as? HTTPURLResponse)?.statusCode == 200,
+                  let location else {
+                DispatchQueue.main.async {
+                    if self.updateInstallInFlight {
+                        self.failUpdate(SoftwareUpdateError.downloadFailed, releaseURL: update.releaseURL)
+                    }
+                }
+                return
+            }
+            var shouldContinue = false
+            DispatchQueue.main.sync {
+                shouldContinue = self.updateInstallInFlight
+                if shouldContinue {
+                    self.updateDownloadTask = nil
+                    self.setUpdateStage("Verifying download…", indeterminate: true)
+                }
+            }
+            guard shouldContinue else { return }
+            do {
+                try FileManager.default.moveItem(at: location, to: destination)
+            } catch {
+                DispatchQueue.main.async {
+                    if self.updateInstallInFlight {
+                        self.failUpdate(SoftwareUpdateError.downloadFailed, releaseURL: update.releaseURL)
+                    }
+                }
+                return
+            }
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.verifyAndInstall(update, archive: destination)
+            }
+        }
+        updateDownloadTask = task
+        task.resume()
+    }
+
+    private func verifyAndInstall(_ update: AvailableUpdate, archive: URL) {
+        do {
+            let values = try archive.resourceValues(forKeys: [.fileSizeKey])
+            guard Int64(values.fileSize ?? -1) == update.asset.size else {
+                throw SoftwareUpdateError.verificationFailed("the file size does not match the release")
+            }
+            let digest = try sha256(of: archive)
+            guard digest == update.asset.sha256 else {
+                throw SoftwareUpdateError.verificationFailed("the SHA-256 digest does not match GitHub")
+            }
+
+            DispatchQueue.main.async { self.setUpdateStage("Checking the app bundle…", indeterminate: true) }
+            guard let temporaryDirectory = updateTemporaryDirectory else {
+                throw SoftwareUpdateError.extractionFailed
+            }
+            let extracted = temporaryDirectory.appendingPathComponent("extracted", isDirectory: true)
+            try FileManager.default.createDirectory(at: extracted, withIntermediateDirectories: true)
+            try runUpdateTool("/usr/bin/ditto", ["-x", "-k", archive.path, extracted.path],
+                              failure: .extractionFailed)
+            let candidate = extracted.appendingPathComponent("Codex Bar.app", isDirectory: true)
+            try validateUpdateBundle(candidate, expectedVersion: update.version)
+
+            DispatchQueue.main.async { self.setUpdateStage("Installing update…", indeterminate: true) }
+            let installed = try replaceInstalledApp(with: candidate)
+            DispatchQueue.main.async { self.relaunchUpdatedApp(installed, releaseURL: update.releaseURL) }
+        } catch {
+            DispatchQueue.main.async { self.failUpdate(error, releaseURL: update.releaseURL) }
+        }
+    }
+
+    private func validateUpdateBundle(_ candidate: URL, expectedVersion: String) throws {
+        let values = try candidate.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard values.isDirectory == true, values.isSymbolicLink != true,
+              let bundle = Bundle(url: candidate) else {
+            throw SoftwareUpdateError.invalidBundle("the expected Codex Bar.app bundle is missing")
+        }
+        guard bundle.bundleIdentifier == Bundle.main.bundleIdentifier else {
+            throw SoftwareUpdateError.invalidBundle("the bundle identifier does not match")
+        }
+        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        guard version == expectedVersion else {
+            throw SoftwareUpdateError.invalidBundle("the version does not match the release")
+        }
+        guard let executable = bundle.executableURL else {
+            throw SoftwareUpdateError.invalidBundle("the executable is missing")
+        }
+        try runUpdateTool("/usr/bin/codesign", ["--verify", "--deep", "--strict", candidate.path],
+                          failure: .verificationFailed("the code signature is invalid"))
+        try runUpdateTool("/usr/bin/lipo", [executable.path, "-verify_arch", releaseArchitecture],
+                          failure: .verificationFailed("the executable architecture is incompatible"))
+    }
+
+    private func runUpdateTool(_ executable: String, _ arguments: [String],
+                               failure: SoftwareUpdateError) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            throw failure
+        }
+        guard process.terminationStatus == 0 else { throw failure }
+    }
+
+    private func sha256(of file: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let data = try handle.read(upToCount: 1_024 * 1_024), !data.isEmpty {
+            hasher.update(data: data)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    private struct InstalledUpdate {
+        let appURL: URL
+        let backupURL: URL
+    }
+
+    private func replaceInstalledApp(with candidate: URL) throws -> InstalledUpdate {
+        let fileManager = FileManager.default
+        let current = Bundle.main.bundleURL.standardizedFileURL
+        guard current.pathExtension == "app",
+              current.lastPathComponent == "Codex Bar.app",
+              !current.path.contains("/AppTranslocation/") else {
+            throw SoftwareUpdateError.installationUnavailable(
+                "This copy of Codex Bar cannot update itself. Move it to Applications, then try again."
+            )
+        }
+        let parent = current.deletingLastPathComponent()
+        guard fileManager.isWritableFile(atPath: parent.path) else {
+            throw SoftwareUpdateError.installationUnavailable(
+                "Codex Bar cannot replace the copy in \(parent.path). Install the update manually or move the app to your user Applications folder."
+            )
+        }
+
+        let token = UUID().uuidString
+        let staging = parent.appendingPathComponent(".Codex Bar.update-\(token).app")
+        let backup = parent.appendingPathComponent(".Codex Bar.backup-\(token).app")
+        do {
+            try fileManager.copyItem(at: candidate, to: staging)
+            try fileManager.moveItem(at: current, to: backup)
+            do {
+                try fileManager.moveItem(at: staging, to: current)
+            } catch {
+                try? fileManager.moveItem(at: backup, to: current)
+                throw error
+            }
+        } catch {
+            try? fileManager.removeItem(at: staging)
+            throw SoftwareUpdateError.installationFailed(error.localizedDescription)
+        }
+        return InstalledUpdate(appURL: current, backupURL: backup)
+    }
+
+    private func relaunchUpdatedApp(_ installed: InstalledUpdate, releaseURL: URL?) {
+        setUpdateStage("Relaunching Codex Bar…", indeterminate: true)
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: installed.appURL, configuration: configuration) { [weak self] _, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if let error {
+                    let fileManager = FileManager.default
+                    try? fileManager.removeItem(at: installed.appURL)
+                    try? fileManager.moveItem(at: installed.backupURL, to: installed.appURL)
+                    self.failUpdate(SoftwareUpdateError.installationFailed(
+                        "the new app could not be launched (\(error.localizedDescription))"
+                    ), releaseURL: releaseURL)
+                } else {
+                    self.finishUpdateUI()
+                    NSApp.terminate(nil)
+                }
+            }
+        }
+    }
+
+    private func cleanupStaleUpdateBackups() {
+        let fileManager = FileManager.default
+        let parent = Bundle.main.bundleURL.standardizedFileURL.deletingLastPathComponent()
+        guard fileManager.isWritableFile(atPath: parent.path),
+              let entries = try? fileManager.contentsOfDirectory(at: parent,
+                                                                 includingPropertiesForKeys: nil) else { return }
+        for entry in entries where entry.lastPathComponent.hasPrefix(".Codex Bar.backup-")
+                || entry.lastPathComponent.hasPrefix(".Codex Bar.update-") {
+            try? fileManager.removeItem(at: entry)
+        }
+    }
+
+    private func showUpdateProgress(version: String) {
+        let progressWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 430, height: 154),
+                                      styleMask: [.titled], backing: .buffered, defer: false)
+        progressWindow.title = "Updating Codex Bar"
+        progressWindow.isReleasedWhenClosed = false
+        progressWindow.center()
+
+        let content = NSView()
+        progressWindow.contentView = content
+        let label = NSTextField(labelWithString: "Preparing Codex Bar \(version)…")
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(label)
+
+        let indicator = NSProgressIndicator()
+        indicator.style = .bar
+        indicator.minValue = 0
+        indicator.maxValue = 1
+        indicator.doubleValue = 0
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(indicator)
+
+        let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelUpdate))
+        cancel.bezelStyle = .rounded
+        cancel.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(cancel)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
+            label.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
+            label.topAnchor.constraint(equalTo: content.topAnchor, constant: 25),
+            indicator.leadingAnchor.constraint(equalTo: label.leadingAnchor),
+            indicator.trailingAnchor.constraint(equalTo: label.trailingAnchor),
+            indicator.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 18),
+            cancel.trailingAnchor.constraint(equalTo: label.trailingAnchor),
+            cancel.topAnchor.constraint(equalTo: indicator.bottomAnchor, constant: 18)
+        ])
+        updateProgressWindow = progressWindow
+        updateProgressLabel = label
+        updateProgressIndicator = indicator
+        updateCancelButton = cancel
+        progressWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func setUpdateStage(_ text: String, indeterminate: Bool) {
+        updateProgressLabel?.stringValue = text
+        updateProgressIndicator?.isIndeterminate = indeterminate
+        if indeterminate { updateProgressIndicator?.startAnimation(nil) }
+        else { updateProgressIndicator?.stopAnimation(nil) }
+        updateCancelButton?.isEnabled = !indeterminate
+    }
+
+    private func updateDownloadProgress() {
+        guard let task = updateDownloadTask,
+              let indicator = updateProgressIndicator,
+              !indicator.isIndeterminate else { return }
+        let progress = task.progress.fractionCompleted
+        if progress.isFinite { indicator.doubleValue = progress }
+    }
+
+    @objc private func cancelUpdate() {
+        updateDownloadTask?.cancel()
+        finishUpdateUI()
+    }
+
+    private func failUpdate(_ error: Error, releaseURL: URL?) {
+        finishUpdateUI()
+        let alert = NSAlert()
+        alert.messageText = "Codex Bar Could Not Update"
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        if releaseURL != nil { alert.addButton(withTitle: "View Release") }
+        if alert.runModal() == .alertSecondButtonReturn, let releaseURL {
+            NSWorkspace.shared.open(releaseURL)
+        }
+    }
+
+    private func showUpdateFailure(_ error: Error) {
+        failUpdate(error, releaseURL: updateURL)
+    }
+
+    private func finishUpdateUI() {
+        updateInstallInFlight = false
+        updateDownloadTask = nil
+        updateProgressWindow?.orderOut(nil)
+        updateProgressWindow = nil
+        updateProgressIndicator = nil
+        updateProgressLabel = nil
+        updateCancelButton = nil
+        if let directory = updateTemporaryDirectory { try? FileManager.default.removeItem(at: directory) }
+        updateTemporaryDirectory = nil
     }
 
     private func notifyCompletion(_ session: SessionTracker) {
@@ -1966,9 +2355,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         preferences.submenu = preferencesMenu
         menu.addItem(preferences)
 
-        let update = configuredMenuItem(latestVersion.map { "Update Available: \($0)" } ?? "Check for Updates",
+        let updateTitle = updateInstallInFlight
+            ? "Installing Update…"
+            : latestVersion.map { "Update Available: \($0)" } ?? "Check for Updates"
+        let updateAction: Selector? = updateInstallInFlight
+            ? nil
+            : (latestVersion == nil ? #selector(checkForUpdatesNow) : #selector(openAvailableUpdate))
+        let update = configuredMenuItem(updateTitle,
                                         symbol: latestVersion == nil ? "arrow.triangle.2.circlepath" : "arrow.down.circle.fill",
-                                        action: latestVersion == nil ? #selector(checkForUpdatesNow) : #selector(openAvailableUpdate))
+                                        action: updateAction)
         menu.addItem(update)
 
         menu.addItem(.separator())
