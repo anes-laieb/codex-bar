@@ -11,8 +11,8 @@ artwork bundled with Codex Bar. Keep those assets accurate, private, and reasona
 4. Review every task title, project name, path, model name, notification, and activity
    entry before committing the image. Codex session text can be private.
 5. Replace live task names with clearly fictional demo copy or blur them completely.
-6. Save the final image as `docs/assets/app-window.png` and update
-   `docs/assets/README.md` if the preparation method changes.
+6. Save the final image as `docs/assets/app-window.png` and document any material
+   preparation change in this file.
 
 The final preview should show the real application structure and controls. Do not add a
 feature to the screenshot that the documented version does not implement.
@@ -36,6 +36,14 @@ ffmpeg -i ~/Desktop/codex-bar.mov \
 
 ## Hero artwork
 
-The hero is decorative product artwork, not a screenshot. Keep the application icon
-recognizable, avoid fake interface claims and embedded text, and label the image as an
-illustration in both the README and `docs/assets/README.md`.
+The hero is AI-generated decorative product artwork, not a screenshot. Keep the
+application icon recognizable, avoid fake interface claims and embedded text, and label
+the image as an illustration in the README.
+
+## Menu-bar walkthrough
+
+`docs/assets/menu-bar-showcase.svg` is a deterministic UI walkthrough based on the real
+menu structure and state behavior. It uses fictional task names so it can show the full
+experience without publishing prompts, project paths, or session identifiers. Keep its
+labels synchronized with `AppDelegate.menuNeedsUpdate`, Quick Preferences, and the
+current bundle version.

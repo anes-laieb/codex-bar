@@ -9,6 +9,25 @@ the application bundle version.
 
 - No user-facing changes recorded yet.
 
+## 2.1.10 - 2026-07-22
+
+### Documentation
+
+- Added a dedicated menu-bar walkthrough covering idle, working, attention, the open
+  session menu, usage, and Quick Preferences with fictional demo data.
+- Added icon-led links for issues, contribution policy, security, support, and conduct.
+- Added icons to the major README sections and separated the menu-bar experience from
+  the full sessions-window preview.
+- Consolidated media provenance and capture guidance into `docs/CAPTURE.md`, removing
+  the unnecessary nested `docs/assets/README.md`.
+- Replaced the Apache appendix placeholder with the project's actual 2026 contributor
+  copyright notice while retaining the complete license terms.
+
+### Release
+
+- Bumped the application and release package to 2.1.10 so the latest published archive
+  matches the corrected documentation and bundled license notice.
+
 ## 2.1.9 - 2026-07-22
 
 ### Added

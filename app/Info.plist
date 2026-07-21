@@ -7,8 +7,8 @@
     <key>CFBundleIdentifier</key>      <string>com.codexbar.app</string>
     <key>CFBundleExecutable</key>      <string>CodexBar</string>
     <key>CFBundleIconFile</key>        <string>AppIcon</string>
-    <key>CFBundleVersion</key>         <string>2.1.9</string>
-    <key>CFBundleShortVersionString</key><string>2.1.9</string>
+    <key>CFBundleVersion</key>         <string>2.1.10</string>
+    <key>CFBundleShortVersionString</key><string>2.1.10</string>
     <key>CFBundlePackageType</key>     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>  <string>13.0</string>
     <key>NSHumanReadableCopyright</key><string>Apache-2.0 · Codex Bar contributors</string>
