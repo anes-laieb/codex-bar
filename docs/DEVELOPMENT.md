@@ -60,7 +60,10 @@ Then test the built application manually:
 - quiet hours across midnight;
 - timer, Dock, appearance, and Launch at Login preferences;
 - empty state with no Codex task open;
-- manual/automatic update checks and offline failure behavior;
+- manual/automatic update checks, offline failure behavior, download cancellation, and
+  the writable-installation error path;
+- updater rejection of an incorrect archive digest, bundle identifier, version,
+  architecture, or code signature;
 - Light and Dark appearances at standard and Retina display scales.
 
 ## Release checklist
@@ -73,8 +76,10 @@ Then test the built application manually:
    `LICENSE`/`NOTICE`, and checksum are described accurately in the release notes.
 6. Confirm `git status` contains no build output or private session material.
 7. Tag the reviewed commit with the same version prefixed by `v`.
-8. Publish the ZIP and `.sha256` file together, then confirm the in-app update check sees
-   the new release.
+8. Publish the ZIP and `.sha256` file together, then confirm GitHub reports a `sha256:`
+   digest for the ZIP asset and the in-app update check sees the new release.
+9. From the previous version, exercise the complete download, verification, replacement,
+   rollback cleanup, and relaunch path.
 
 ## Design constraints
 

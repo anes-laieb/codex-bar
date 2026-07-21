@@ -9,6 +9,29 @@ the application bundle version.
 
 - No user-facing changes recorded yet.
 
+## 2.1.11 - 2026-07-22
+
+### Added
+
+- Added a direct in-app updater to the menu-bar **Update Available** action.
+- Added a focused progress window with download progress and cancellable downloads.
+
+### Security
+
+- Require the architecture-specific GitHub release asset and its GitHub-provided SHA-256
+  digest before an update can be installed.
+- Validate the extracted app's bundle identifier, version, architecture, and code
+  signature before replacing the installed copy.
+- Keep the existing app as a rollback copy until the updated version launches, and leave
+  the current installation untouched when its destination is not writable.
+
+### Changed
+
+- Relaunch Codex Bar automatically after a successful update instead of opening the
+  release page in a browser.
+- Documented updater network behavior, verification, permissions, and the one-time manual
+  upgrade required from versions that predate the in-app installer.
+
 ## 2.1.10 - 2026-07-22
 
 ### Documentation
