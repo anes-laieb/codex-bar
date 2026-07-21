@@ -42,7 +42,7 @@ open "$DEST"
 
 echo ""
 echo "Done. 'Codex Bar' launched — its window opened, it's in your Dock, and a"
-echo "solid sparkle sits in your menu bar (green idle / amber working / red approval)."
+echo "Codex logo sits in your menu bar and animates while a session is working."
 echo "  • App: $DEST"
 echo "  • Tick 'Launch at login' in the window (or menu) to keep it across restarts."
 echo "  • Uninstall: quit it, then delete \"$DEST\"."

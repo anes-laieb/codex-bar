@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/anes-laieb/codex-bar/security/advisories/new
+    about: Report suspected vulnerabilities privately; do not open a public issue.
+  - name: Support guidance
+    url: https://github.com/anes-laieb/codex-bar/blob/main/SUPPORT.md
+    about: Review supported help channels and basic troubleshooting before filing.
