@@ -17,6 +17,20 @@ enum CxState: String {
     case unknown
 }
 
+enum StatusAppearance: String, CaseIterable {
+    case defaultArtwork = "default"
+    case system
+    case skyBlue
+
+    var title: String {
+        switch self {
+        case .defaultArtwork: return "Default"
+        case .system: return "System"
+        case .skyBlue: return "Sky Blue"
+        }
+    }
+}
+
 enum SessionSignal {
     case completed
     case needsAttention
@@ -380,6 +394,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
     private var iconAnimationStartedAt = Date()
     private var lastImageKey = ""
     private var idleStatusImage: NSImage?
+    private var defaultIdleStatusImage: NSImage?
     private var skyBlueIdleStatusImage: NSImage?
     private var appLogoImage: NSImage?
     private var attentionStatusImage: NSImage?
@@ -548,6 +563,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
                                      subdirectory: "StatusAssets") {
             appLogoImage = NSImage(contentsOf: url)
             appLogoImage?.isTemplate = false
+            defaultIdleStatusImage = prepareFullColorStatusImage(NSImage(contentsOf: url))
         }
         if let url = Bundle.main.url(forResource: "codex-logo", withExtension: "svg",
                                      subdirectory: "StatusAssets") {
@@ -817,7 +833,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         quietHoursCheck = NSButton(checkboxWithTitle: "", target: self, action: #selector(toggleQuietHours))
 
         appearancePopup = NSPopUpButton()
-        appearancePopup.addItems(withTitles: ["System", "Sky Blue"])
+        appearancePopup.addItems(withTitles: StatusAppearance.allCases.map(\.title))
         appearancePopup.target = self
         appearancePopup.action = #selector(changeAppearance)
 
@@ -1000,8 +1016,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         // Follow the GIF's authored 0.03s frame timeline exactly.
         let elapsed = Date().timeIntervalSince(iconAnimationStartedAt)
         iconAnimationFrame = Int(elapsed / 0.03) % workingStatusFrames.count
-        let frames = skyBlueAppearance && skyBlueWorkingStatusFrames.count == workingStatusFrames.count
-            ? skyBlueWorkingStatusFrames : workingStatusFrames
+        let frames = statusFrames(for: statusAppearance)
         if let button = statusItem.button {
             button.image = frames[iconAnimationFrame]
             button.contentTintColor = nil
@@ -1096,16 +1111,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         NSColor(srgbRed: 123.0 / 255.0, green: 152.0 / 255.0, blue: 1.0, alpha: 1.0)
     }
 
-    private var skyBlueAppearance: Bool {
+    private var statusAppearance: StatusAppearance {
         let value = UserDefaults.standard.string(forKey: "statusAppearance")
-        return value == "skyBlue" || value == "colored"
+        if value == "colored" { return .skyBlue }
+        return value.flatMap(StatusAppearance.init(rawValue:)) ?? .system
+    }
+
+    private func statusFrames(for appearance: StatusAppearance) -> [NSImage] {
+        if appearance == .skyBlue,
+           skyBlueWorkingStatusFrames.count == workingStatusFrames.count {
+            return skyBlueWorkingStatusFrames
+        }
+        return workingStatusFrames
     }
 
     private func render() {
         guard let button = statusItem.button else { return }
         let state = store.state
         let workingFrame = workingStatusFrames.isEmpty ? -1 : iconAnimationFrame % workingStatusFrames.count
-        let key = "\(state.rawValue)-\(skyBlueAppearance)"
+        let appearance = statusAppearance
+        let key = "\(state.rawValue)-\(appearance.rawValue)"
         if key != lastImageKey {
             lastImageKey = key
             let fallback = NSImage(systemSymbolName: icon,
@@ -1116,11 +1141,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
                 button.image = attentionStatusImage
                 button.contentTintColor = nil
             } else if state == .working, workingFrame >= 0 {
-                let frames = skyBlueAppearance && skyBlueWorkingStatusFrames.count == workingStatusFrames.count
-                    ? skyBlueWorkingStatusFrames : workingStatusFrames
+                let frames = statusFrames(for: appearance)
                 button.image = frames[workingFrame]
                 button.contentTintColor = nil
-            } else if skyBlueAppearance, let skyBlueIdleStatusImage {
+            } else if appearance == .defaultArtwork, let defaultIdleStatusImage {
+                button.image = defaultIdleStatusImage
+                button.contentTintColor = nil
+            } else if appearance == .skyBlue, let skyBlueIdleStatusImage {
                 button.image = skyBlueIdleStatusImage
                 button.contentTintColor = nil
             } else {
@@ -1381,7 +1408,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         quietEndPopup.isEnabled = defaults.bool(forKey: "quietHoursEnabled")
         updateCheck.state = defaults.bool(forKey: "checkForUpdates") ? .on : .off
         dockCheck.state = defaults.bool(forKey: "showInDock") ? .on : .off
-        appearancePopup.selectItem(at: skyBlueAppearance ? 1 : 0)
+        let appearanceIndex = StatusAppearance.allCases.firstIndex(of: statusAppearance) ?? 1
+        appearancePopup.selectItem(at: appearanceIndex)
         if #available(macOS 13.0, *) {
             loginCheck.state = SMAppService.mainApp.status == .enabled ? .on : .off
             loginCheck.isHidden = false
@@ -1917,11 +1945,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
 
         let appearance = configuredMenuItem("Icon Color", symbol: "paintpalette", action: nil)
         let appearanceMenu = NSMenu()
+        let currentAppearance = statusAppearance
+        let defaultItem = configuredMenuItem("Default", symbol: "app.badge", action: #selector(useDefaultAppearance))
+        defaultItem.state = currentAppearance == .defaultArtwork ? .on : .off
+        appearanceMenu.addItem(defaultItem)
         let systemItem = configuredMenuItem("System", symbol: "circle.lefthalf.filled", action: #selector(useSystemAppearance))
-        systemItem.state = skyBlueAppearance ? .off : .on
+        systemItem.state = currentAppearance == .system ? .on : .off
         appearanceMenu.addItem(systemItem)
         let skyBlueItem = configuredMenuItem("Sky Blue", symbol: "drop.fill", action: #selector(useSkyBlueAppearance))
-        skyBlueItem.state = skyBlueAppearance ? .on : .off
+        skyBlueItem.state = currentAppearance == .skyBlue ? .on : .off
         appearanceMenu.addItem(skyBlueItem)
         appearance.submenu = appearanceMenu
         preferencesMenu.addItem(appearance)
@@ -2014,14 +2046,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
     }
 
     @objc private func changeAppearance() {
-        setAppearance(skyBlue: appearancePopup.indexOfSelectedItem == 1)
+        let choices = StatusAppearance.allCases
+        let index = appearancePopup.indexOfSelectedItem
+        guard choices.indices.contains(index) else { return }
+        setAppearance(choices[index])
     }
 
-    @objc private func useSystemAppearance() { setAppearance(skyBlue: false) }
-    @objc private func useSkyBlueAppearance() { setAppearance(skyBlue: true) }
+    @objc private func useDefaultAppearance() { setAppearance(.defaultArtwork) }
+    @objc private func useSystemAppearance() { setAppearance(.system) }
+    @objc private func useSkyBlueAppearance() { setAppearance(.skyBlue) }
 
-    private func setAppearance(skyBlue: Bool) {
-        UserDefaults.standard.set(skyBlue ? "skyBlue" : "system", forKey: "statusAppearance")
+    private func setAppearance(_ appearance: StatusAppearance) {
+        UserDefaults.standard.set(appearance.rawValue, forKey: "statusAppearance")
         lastImageKey = ""
         render()
         updateWindow(force: true)

@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Release 2.1.8" src="https://img.shields.io/badge/release-v2.1.8-60a5fa?style=flat-square"></a>
+  <a href="../../releases/latest"><img alt="Release 2.1.9" src="https://img.shields.io/badge/release-v2.1.9-60a5fa?style=flat-square"></a>
   <img alt="macOS 13 or newer" src="https://img.shields.io/badge/macOS-13%2B-111827?style=flat-square&logo=apple&logoColor=white">
   <img alt="Native Swift" src="https://img.shields.io/badge/native-Swift-f97316?style=flat-square&logo=swift&logoColor=white">
   <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-22c55e?style=flat-square"></a>
@@ -55,20 +55,24 @@
 - **Actionable notifications** with **Open Task** and **Mute Session** buttons.
 - **Recent activity and weekly usage** without leaving the menu bar.
 - **Separate completion and question sounds**, previews, and quiet hours.
-- **System and Sky Blue appearances**, plus optional Dock visibility.
+- **Default, System, and Sky Blue appearances**, plus optional Dock visibility.
 - **Automatic release checks** that never install anything without you.
 - **No daemon and no Codex configuration edits.** The native app only reads Codex's
   local thread index and rollout logs.
 
-### Artwork that stays alive
+### Choose your icon color
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="app/StatusAssets/app-logo.png" width="86" alt="Codex Bar idle icon"><br><strong>Idle</strong><br><sub>Everything is caught up</sub></td>
-    <td align="center" width="33%"><img src="app/StatusAssets/codex-animation.gif" width="86" alt="Animated Codex Bar working icon"><br><strong>Working</strong><br><sub>One or more tasks are active</sub></td>
-    <td align="center" width="33%"><img src="app/StatusAssets/colored-idle.png" width="86" alt="Codex Bar Sky Blue appearance"><br><strong>Sky Blue</strong><br><sub>An optional color-forward appearance</sub></td>
+    <td align="center" bgcolor="#0d1117" width="33%"><img src="app/StatusAssets/app-logo.png" width="86" alt="Codex Bar Default appearance"><br><strong>Default</strong><br><sub>Branded full-color idle artwork</sub></td>
+    <td align="center" bgcolor="#0d1117" width="33%"><img src="app/StatusAssets/codex-logo.svg" width="86" alt="Codex Bar System appearance"><br><strong>System</strong><br><sub>Follows macOS light/dark contrast</sub></td>
+    <td align="center" bgcolor="#0d1117" width="33%"><img src="app/StatusAssets/colored-idle.png" width="86" alt="Codex Bar Sky Blue appearance"><br><strong>Sky Blue</strong><br><sub>Color-forward idle and working states</sub></td>
   </tr>
 </table>
+
+**System is selected by default** because its template artwork remains legible on both
+light and dark menu bars. Switch instantly from **Preferences → Icon color** or the
+menu-bar **Quick Preferences** submenu.
 
 ## Install
 
@@ -79,7 +83,7 @@ Download the Apple silicon build and its checksum from the
 **Codex Bar.app** into `/Applications`.
 
 ```sh
-shasum -a 256 -c Codex-Bar-2.1.8-macOS-arm64.zip.sha256
+shasum -a 256 -c Codex-Bar-2.1.9-macOS-arm64.zip.sha256
 ```
 
 The downloadable build is ad-hoc signed and is not Apple-notarized. On first launch,

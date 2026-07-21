@@ -9,6 +9,25 @@ the application bundle version.
 
 - No user-facing changes recorded yet.
 
+## 2.1.9 - 2026-07-22
+
+### Added
+
+- Added separate Default, System, and Sky Blue menu-bar icon appearances.
+- Added the Default appearance using the branded full-color idle artwork.
+
+### Changed
+
+- Kept System as the fresh-install default so the template SVG follows macOS light/dark
+  menu-bar contrast automatically.
+- Updated the README appearance comparison to show the correct System SVG instead of
+  labeling the full-color Default artwork as the idle/system presentation.
+
+### Compatibility
+
+- Existing `system`, `skyBlue`, and legacy `colored` preferences continue to resolve to
+  the same appearance after updating.
+
 ## 2.1.8 - 2026-07-21
 
 ### Added
