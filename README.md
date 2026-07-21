@@ -11,10 +11,22 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Release 2.1.9" src="https://img.shields.io/badge/release-v2.1.9-60a5fa?style=flat-square"></a>
+  <a href="../../releases/latest"><img alt="Release 2.1.10" src="https://img.shields.io/badge/release-v2.1.10-60a5fa?style=flat-square"></a>
   <img alt="macOS 13 or newer" src="https://img.shields.io/badge/macOS-13%2B-111827?style=flat-square&logo=apple&logoColor=white">
   <img alt="Native Swift" src="https://img.shields.io/badge/native-Swift-f97316?style=flat-square&logo=swift&logoColor=white">
   <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-22c55e?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/anes-laieb/codex-bar/issues">🐛 <strong>Issues</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="CONTRIBUTING.md">🤝 <strong>Contribution policy</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="SECURITY.md">🔒 <strong>Security</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="SUPPORT.md">💬 <strong>Support</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="CODE_OF_CONDUCT.md">🫶 <strong>Conduct</strong></a>
 </p>
 
 <p align="center">
@@ -30,10 +42,11 @@
 </p>
 
 > [!NOTE]
-> The hero is a product illustration. The interface preview below comes from the real
-> application, with demo-safe session names substituted for private task text.
+> The hero is a product illustration. The menu-bar walkthrough is rendered from the real
+> 2.1.10 UI structure with demo-safe data; the window preview comes from the real app with
+> private task titles replaced before publication.
 
-## Your Codex control center
+## ✨ Your Codex control center
 
 <table>
   <tr>
@@ -43,11 +56,26 @@
   </tr>
 </table>
 
+## 🖥️ The menu bar in action
+
+<p align="center">
+  <img src="docs/assets/menu-bar-showcase.svg" width="100%" alt="Codex Bar idle state, working state with timer and activity text, and the detailed open menu with Quick Preferences">
+</p>
+
+| Moment | What Codex Bar shows |
+| --- | --- |
+| **Idle** | Adaptive status artwork with no distracting text when every task is caught up. |
+| **Working** | The authored animation, an optional elapsed timer, and live activity text such as `Thinking...`, all held in stable-width slots. |
+| **Needs attention** | A sky-blue indicator, `Check Codex`, and a pending-task count when more than one task needs you. |
+| **Menu open** | Live sessions, exact-task controls, weekly usage, New Chat, recent activity, hidden sessions, Quick Preferences, updates, and app controls. Animation and timers continue while the menu is open. |
+
+## 🪟 The full sessions window
+
 <p align="center">
   <img src="docs/assets/app-window.png" width="760" alt="Codex Bar sessions window showing active tasks, recent activity, and preferences">
 </p>
 
-### Designed around the way agents actually work
+### ✦ Designed around the way agents actually work
 
 - **Multiple active sessions**, sorted by what needs attention first.
 - **Pin, mute, hide, and restore** controls for individual tasks.
@@ -60,7 +88,7 @@
 - **No daemon and no Codex configuration edits.** The native app only reads Codex's
   local thread index and rollout logs.
 
-### Choose your icon color
+### 🎨 Choose your icon color
 
 <table>
   <tr>
@@ -74,7 +102,7 @@
 light and dark menu bars. Switch instantly from **Preferences → Icon color** or the
 menu-bar **Quick Preferences** submenu.
 
-## Install
+## 📦 Install
 
 ### Download the app
 
@@ -83,7 +111,7 @@ Download the Apple silicon build and its checksum from the
 **Codex Bar.app** into `/Applications`.
 
 ```sh
-shasum -a 256 -c Codex-Bar-2.1.9-macOS-arm64.zip.sha256
+shasum -a 256 -c Codex-Bar-2.1.10-macOS-arm64.zip.sha256
 ```
 
 The downloadable build is ad-hoc signed and is not Apple-notarized. On first launch,
@@ -105,7 +133,7 @@ run `xcode-select --install` once). macOS 13+.
 
 That's it. No Homebrew or extra apps are required.
 
-## Using it
+## 🎛️ Using it
 
 | Menu-bar state | Meaning |
 | --- | --- |
@@ -123,7 +151,7 @@ That's it. No Homebrew or extra apps are required.
 
 Quit it from its menu (or the window), then drag **`/Applications/Codex Bar.app`** to the Trash. Nothing else is left behind.
 
-## How it works
+## ⚙️ How it works
 
 Codex writes a JSON log for every session under `~/.codex/sessions/**/rollout-*.jsonl`.
 Codex Bar finds the rollout files currently held open by Codex, matches them to Codex's
@@ -145,7 +173,7 @@ across Codex versions. Tested against `codex-cli 0.144.2`.
 > If a future Codex release changes these events, please [open an issue](https://github.com/anes-laieb/codex-bar/issues/new/choose)
 > with the Codex version, the behavior you observed, and safe reproduction details.
 
-## Advanced: SwiftBar/xbar plugin (optional)
+## 🧩 Advanced: SwiftBar/xbar plugin (optional)
 
 Prefer to render through [SwiftBar](https://github.com/swiftbar/SwiftBar) instead of a
 standalone app? There's a plugin path that uses a small background watcher + a SwiftBar
@@ -157,14 +185,14 @@ and preserving any existing hook.
 
 ---
 
-## Requirements
+## ✅ Requirements
 
 - **macOS 13+**
 - **Swift toolchain** (Xcode or `xcode-select --install`), only needed to build.
 - **Codex CLI or Codex Desktop**, which Codex Bar watches.
 - The macOS-provided `lsof` and `sqlite3` command-line tools.
 
-## Privacy and network access
+## 🔒 Privacy and network access
 
 Session discovery and status processing happen locally. Codex Bar reads Codex's local
 thread database and rollout logs, and stores its own preferences and recent-activity
@@ -174,7 +202,7 @@ When update checks are enabled, the app requests the latest release metadata fro
 GitHub API. This is its only direct network request. You can disable automatic update
 checks in **Quick Preferences**.
 
-## Known limitations
+## ⚠️ Known limitations
 
 - **Full menu bar:** Codex Bar is a normal menu-bar item; if your menu bar is packed
   (e.g. a notched Mac), macOS may hide it. Reveal it by ⌘-dragging items apart or with a
@@ -182,7 +210,7 @@ checks in **Quick Preferences**.
 - **Log-format dependent:** it relies on Codex's rollout-log format, which may change
   across versions (see *How it works*).
 
-## Repository layout
+## 🗂️ Repository layout
 
 ```
 codex-bar/
@@ -203,14 +231,14 @@ codex-bar/
 For implementation details, see [Architecture](docs/ARCHITECTURE.md). For local build
 and verification guidance, see [Development](docs/DEVELOPMENT.md).
 
-## Project policy and support
+## 💬 Project policy and support
 
 Issues are open for bug reports and feature requests. The project is **not accepting
 code or documentation contributions at this time**, so please do not open pull requests.
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before participating, [SUPPORT.md](SUPPORT.md)
 for help channels, and [SECURITY.md](SECURITY.md) for private vulnerability reports.
 
-## License
+## 📄 License
 
 [Apache-2.0](LICENSE) © the Codex Bar contributors. An independent, community project,
 not affiliated with or endorsed by OpenAI; see [NOTICE](NOTICE).
