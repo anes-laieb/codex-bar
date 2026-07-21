@@ -1,91 +1,152 @@
-# Codex Bar
+<p align="center">
+  <img src="app/StatusAssets/app-logo.png" width="112" alt="Codex Bar app icon">
+</p>
 
-A tiny macOS **menu-bar app for the [Codex CLI](https://github.com/openai/codex)** —
-so you always know, at a glance, whether Codex is **working** or **waiting for you**,
-and you get a **native notification** the moment a turn finishes. Like the
-"your agent is done" feedback in Claude Code, but for Codex.
+<h1 align="center">Codex Bar</h1>
 
-![Codex Bar — menu-bar states, window, and a turn-complete notification](docs/demo.svg)
+<p align="center">
+  <strong>Every Codex task. One beautifully calm place.</strong><br>
+  A native macOS menu-bar companion that shows what Codex is doing,<br>
+  tells you when it needs you, and opens the exact task in one click.
+</p>
 
-> The image is a mockup — to drop in a real screen recording, see [docs/CAPTURE.md](docs/CAPTURE.md).
+<p align="center">
+  <a href="../../releases/latest"><img alt="Release 2.1.8" src="https://img.shields.io/badge/release-v2.1.8-60a5fa?style=flat-square"></a>
+  <img alt="macOS 13 or newer" src="https://img.shields.io/badge/macOS-13%2B-111827?style=flat-square&logo=apple&logoColor=white">
+  <img alt="Native Swift" src="https://img.shields.io/badge/native-Swift-f97316?style=flat-square&logo=swift&logoColor=white">
+  <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-22c55e?style=flat-square"></a>
+</p>
 
----
+<p align="center">
+  <img src="docs/assets/codex-bar-hero.png" width="100%" alt="Codex Bar bringing multiple live Codex tasks into one calm status center">
+</p>
 
-## What it does
+<p align="center">
+  <a href="../../releases/latest"><strong>Download the latest release</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="#build-from-source"><strong>Build from source</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="docs/ARCHITECTURE.md"><strong>Explore the architecture</strong></a>
+</p>
 
-- **A sparkle in your menu bar, colored by state** — 🟢 green = idle · 🟡 amber = working · 🔴 red = needs approval.
-- **A cycling word while it works** (`Thinking… · Cooking… · Prompting…`), at fixed width so it never jitters.
-- **A notification when a turn completes** — *“Codex — ready for you”* with Codex's last message.
-- **A window + Dock icon** — click the app (or its menu) to see the live turn: elapsed time, project, model · effort, approval policy, and the last message.
-- **Completion sound** you can toggle on/off, and **Launch at Login**.
-- **No config, no daemon, no `notify` hook.** It just reads Codex's own session logs, so it can't break your Codex setup and never edits `~/.codex/config.toml`.
+> [!NOTE]
+> The hero is a product illustration. The interface preview below comes from the real
+> application, with demo-safe session names substituted for private task text.
 
----
+## Your Codex control center
 
-## Install (one command)
+<table>
+  <tr>
+    <td width="33%" valign="top"><strong>See everything live</strong><br><br>Follow every currently open Codex task, including its state, elapsed time, model, effort, project, and session.</td>
+    <td width="33%" valign="top"><strong>Jump to the right task</strong><br><br>Open an exact conversation through its native <code>codex://threads/{id}</code> route—no searching and no stale context.</td>
+    <td width="33%" valign="top"><strong>Be interrupted intelligently</strong><br><br>Separate completion and question alerts, per-session mute controls, actionable notifications, and scheduled quiet hours.</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/assets/app-window.png" width="760" alt="Codex Bar sessions window showing active tasks, recent activity, and preferences">
+</p>
+
+### Designed around the way agents actually work
+
+- **Multiple active sessions**, sorted by what needs attention first.
+- **Pin, mute, hide, and restore** controls for individual tasks.
+- **Animated live activity** with a stable timer and playful thinking verbs.
+- **Actionable notifications** with **Open Task** and **Mute Session** buttons.
+- **Recent activity and weekly usage** without leaving the menu bar.
+- **Separate completion and question sounds**, previews, and quiet hours.
+- **System and Sky Blue appearances**, plus optional Dock visibility.
+- **Automatic release checks** that never install anything without you.
+- **No daemon and no Codex configuration edits.** The native app only reads Codex's
+  local thread index and rollout logs.
+
+### Artwork that stays alive
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="app/StatusAssets/app-logo.png" width="86" alt="Codex Bar idle icon"><br><strong>Idle</strong><br><sub>Everything is caught up</sub></td>
+    <td align="center" width="33%"><img src="app/StatusAssets/codex-animation.gif" width="86" alt="Animated Codex Bar working icon"><br><strong>Working</strong><br><sub>One or more tasks are active</sub></td>
+    <td align="center" width="33%"><img src="app/StatusAssets/colored-idle.png" width="86" alt="Codex Bar Sky Blue appearance"><br><strong>Sky Blue</strong><br><sub>An optional color-forward appearance</sub></td>
+  </tr>
+</table>
+
+## Install
+
+### Download the app
+
+Download the Apple silicon build and its checksum from the
+[latest GitHub release](../../releases/latest), verify it, unzip it, and move
+**Codex Bar.app** into `/Applications`.
+
+```sh
+shasum -a 256 -c Codex-Bar-2.1.8-macOS-arm64.zip.sha256
+```
+
+The downloadable build is ad-hoc signed and is not Apple-notarized. On first launch,
+macOS may ask you to confirm it through **Control-click → Open**. The release notes state
+the exact architecture, minimum macOS version, signature, checksum, and source commit.
+
+### Build from source
 
 ```sh
 git clone https://github.com/anes-laieb/codex-bar.git && cd codex-bar && ./install-app.sh
 ```
 
-That builds **Codex Bar.app**, puts it in `/Applications`, and launches it. A sparkle
-appears in your menu bar and a window opens. Tick **Launch at Login** so it's always there.
+That builds **Codex Bar.app**, puts it in `/Applications`, and launches it. The Codex
+status icon appears in your menu bar and a window opens. Tick **Launch at Login** so it's
+always there.
 
 **Requirement:** Apple's Swift toolchain (already present if you have Xcode; otherwise
 run `xcode-select --install` once). macOS 13+.
 
-That's it — no Homebrew, no extra apps.
-
----
+That's it. No Homebrew or extra apps are required.
 
 ## Using it
 
-| Menu-bar sparkle | Meaning |
+| Menu-bar state | Meaning |
 | --- | --- |
-| 🟢 green | **idle** — Codex is waiting for you |
-| 🟡 amber + cycling word | **working** — a turn is in progress |
-| 🔴 red | **needs approval** — Codex is waiting on an approval (if your Codex version emits one) |
+| Codex idle icon | **idle**: every task is caught up |
+| Animated Codex icon + timer | **working**: at least one turn is in progress |
+| Sky-blue dot + `Check Codex` | **needs attention**: Codex is waiting for an answer or approval |
 
-- **Click the sparkle** for a quick menu (live status, sound toggle, Launch at Login, quit).
-- **Click the Dock icon** (or "Open Codex Bar Window") for the full window.
-- When a turn ends you get the **notification** (with a sound, unless you turn it off).
+- **Click the menu-bar icon** for live sessions, recent activity, quick preferences, updates, and app controls.
+- **Click a session** to open its exact Codex task.
+- **Right-click a window session** to pin it, mute its alerts, or hide it.
+- **Click the Dock icon** (or "Open Sessions Window") for the full window.
+- When a turn ends or needs your answer, you get a notification and its configured sound unless alerts are muted or quiet hours are active.
 
 ### Uninstall
 
 Quit it from its menu (or the window), then drag **`/Applications/Codex Bar.app`** to the Trash. Nothing else is left behind.
 
----
-
 ## How it works
 
 Codex writes a JSON log for every session under `~/.codex/sessions/**/rollout-*.jsonl`.
-Codex Bar tails the most-recently-active one, maps its events to a state, and updates the
-icon + notifications:
+Codex Bar finds the rollout files currently held open by Codex, matches them to Codex's
+local thread index, tails each one, and updates the session list, icon, and notifications:
 
 | Codex log event | State | Notification |
 | --- | --- | --- |
-| `task_started` | working | — |
-| `task_complete` | idle | ✅ “Codex — ready for you” |
-| `turn_aborted` | idle | — |
-| *(any `*approval*` event, if present)* | needs approval | ✅ “Codex needs approval” |
+| `task_started` | working | none |
+| `task_complete` | idle | “Codex is ready” |
+| `turn_aborted` | idle | none |
+| *(any `*approval*` event, if present)* | needs approval | “Codex needs approval” |
+| `request_user_input` | needs attention | “Codex needs attention” |
 
 Because it reads logs (not the `notify` hook), it also catches the **“started working”**
 edge that a hook can't, and it works on both the Codex **CLI** and the **Desktop** app.
 Unknown events are ignored and unparsable lines are skipped, so it degrades gracefully
 across Codex versions. Tested against `codex-cli 0.144.2`.
 
-> If a future Codex renames these events, edit the small sets at the top of
-> [`app/CodexStatus.swift`](app/CodexStatus.swift) (`task_started` / `task_complete` /
-> `turn_aborted`) and rebuild. PRs welcome.
-
----
+> If a future Codex release changes these events, please [open an issue](https://github.com/anes-laieb/codex-bar/issues/new/choose)
+> with the Codex version, the behavior you observed, and safe reproduction details.
 
 ## Advanced: SwiftBar/xbar plugin (optional)
 
 Prefer to render through [SwiftBar](https://github.com/swiftbar/SwiftBar) instead of a
 standalone app? There's a plugin path that uses a small background watcher + a SwiftBar
 plugin, installed with `./install.sh`. See [docs](docs/) and the scripts in `bin/` and
-`plugins/`. Run **either** the app **or** the plugin — `install-app.sh` stops the plugin
+`plugins/`. Run **either** the app **or** the plugin. `install-app.sh` stops the plugin
 path automatically. There's also an optional, best-effort `notify`-hook handler
 (`./install.sh --with-notify-hook`) that edits `config.toml` **only** after backing it up
 and preserving any existing hook.
@@ -95,15 +156,25 @@ and preserving any existing hook.
 ## Requirements
 
 - **macOS 13+**
-- **Swift toolchain** (Xcode or `xcode-select --install`) — only needed to build.
-- **Codex CLI or Codex Desktop** — that's what Codex Bar watches.
+- **Swift toolchain** (Xcode or `xcode-select --install`), only needed to build.
+- **Codex CLI or Codex Desktop**, which Codex Bar watches.
+- The macOS-provided `lsof` and `sqlite3` command-line tools.
+
+## Privacy and network access
+
+Session discovery and status processing happen locally. Codex Bar reads Codex's local
+thread database and rollout logs, and stores its own preferences and recent-activity
+history in macOS user defaults. It does not upload session contents.
+
+When update checks are enabled, the app requests the latest release metadata from the
+GitHub API. This is its only direct network request. You can disable automatic update
+checks in **Quick Preferences**.
 
 ## Known limitations
 
 - **Full menu bar:** Codex Bar is a normal menu-bar item; if your menu bar is packed
   (e.g. a notched Mac), macOS may hide it. Reveal it by ⌘-dragging items apart or with a
   menu-bar manager like [Ice](https://github.com/jordanbaird/Ice).
-- **One session at a time:** the indicator tracks the most-recently-active Codex session.
 - **Log-format dependent:** it relies on Codex's rollout-log format, which may change
   across versions (see *How it works*).
 
@@ -115,15 +186,27 @@ codex-bar/
 ├── app/
 │   ├── CodexStatus.swift    # the whole app: log watcher + menu bar + window + notifications
 │   ├── AppIcon.svg          # app icon (original sparkle mark)
+│   ├── StatusAssets/        # app, idle-state, and animated working artwork
 │   ├── Info.plist           # bundle metadata
 │   └── build.sh             # compile -> "Codex Bar.app" (+ icon via built-in tools)
 ├── install.sh · uninstall.sh   # optional SwiftBar/watcher path
 ├── bin/ · plugins/ · tools/     # the SwiftBar/watcher implementation
-├── docs/                        # demo image + capture guide
-├── README.md · LICENSE · NOTICE
+├── docs/                        # architecture, development, and media guidance
+├── CONTRIBUTING.md · CODE_OF_CONDUCT.md · SECURITY.md · SUPPORT.md
+├── CHANGELOG.md · README.md · LICENSE · NOTICE
 ```
+
+For implementation details, see [Architecture](docs/ARCHITECTURE.md). For local build
+and verification guidance, see [Development](docs/DEVELOPMENT.md).
+
+## Project policy and support
+
+Issues are open for bug reports and feature requests. The project is **not accepting
+code or documentation contributions at this time**, so please do not open pull requests.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before participating, [SUPPORT.md](SUPPORT.md)
+for help channels, and [SECURITY.md](SECURITY.md) for private vulnerability reports.
 
 ## License
 
-[Apache-2.0](LICENSE) © the Codex Bar contributors. An independent, community project —
+[Apache-2.0](LICENSE) © the Codex Bar contributors. An independent, community project,
 not affiliated with or endorsed by OpenAI; see [NOTICE](NOTICE).

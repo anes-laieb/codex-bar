@@ -20,6 +20,7 @@ sound
 # Build output (the app is built locally, never committed)
 build/
 app/build/
+dist/
 *.app
 
 # Editor / local
