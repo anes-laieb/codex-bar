@@ -1,6 +1,6 @@
 # Capturing README media
 
-The README uses a branded hero, a sanitized application-window preview, and the status
+The README uses a branded hero, a sanitized application-window capture, and the status
 artwork bundled with Codex Bar. Keep those assets accurate, private, and reasonably small.
 
 ## Application preview
@@ -15,7 +15,9 @@ artwork bundled with Codex Bar. Keep those assets accurate, private, and reasona
    preparation change in this file.
 
 The final preview should show the real application structure and controls. Do not add a
-feature to the screenshot that the documented version does not implement.
+feature to the screenshot that the documented version does not implement. Crop away empty
+desktop space and window chrome that does not help explain the product; keep the controls,
+session state, and preferences legible at the width used in the README.
 
 ## Animated status capture
 
@@ -40,10 +42,9 @@ The hero is AI-generated decorative product artwork, not a screenshot. Keep the
 application icon recognizable, avoid fake interface claims and embedded text, and label
 the image as an illustration in the README.
 
-## Menu-bar walkthrough
+## README media policy
 
-`docs/assets/menu-bar-showcase.svg` is a deterministic UI walkthrough based on the real
-menu structure and state behavior. It uses fictional task names so it can show the full
-experience without publishing prompts, project paths, or session identifiers. Keep its
-labels synchronized with `AppDelegate.menuNeedsUpdate`, Quick Preferences, and the
-current bundle version.
+Use real captures for product behavior. The README may use the bundled icon artwork and
+working animation directly, but do not create synthetic UI mockups that imply a state the
+application did not render. If a capture contains private session text, replace it with
+clearly fictional demo copy before committing the image.
