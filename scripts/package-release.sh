@@ -10,7 +10,9 @@ MIN_MACOS=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$ROOT/ap
 ARCH=$(uname -m)
 NAME="Codex-Bar-$VERSION-macOS-$ARCH"
 ARCHIVE="$OUTPUT_DIR/$NAME.zip"
-CHECKSUM="$ARCHIVE.sha256"
+ARCHIVE_CHECKSUM="$ARCHIVE.sha256"
+DMG="$OUTPUT_DIR/$NAME.dmg"
+DMG_CHECKSUM="$DMG.sha256"
 BUILD_DIR=$(mktemp -d "${TMPDIR:-/tmp}/codex-bar-release.XXXXXX")
 
 cleanup() {
@@ -19,14 +21,12 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 mkdir -p "$OUTPUT_DIR"
-[ ! -e "$ARCHIVE" ] || {
-  echo "error: release archive already exists: $ARCHIVE" >&2
-  exit 1
-}
-[ ! -e "$CHECKSUM" ] || {
-  echo "error: checksum already exists: $CHECKSUM" >&2
-  exit 1
-}
+for artifact in "$ARCHIVE" "$ARCHIVE_CHECKSUM" "$DMG" "$DMG_CHECKSUM"; do
+  [ ! -e "$artifact" ] || {
+    echo "error: release artifact already exists: $artifact" >&2
+    exit 1
+  }
+done
 
 echo "==> building Codex Bar $VERSION for $ARCH"
 sh "$ROOT/app/build.sh" "$BUILD_DIR"
@@ -46,11 +46,15 @@ unzip -tq "$ARCHIVE"
 echo "==> writing SHA-256 checksum"
 (
   cd "$OUTPUT_DIR"
-  shasum -a 256 "$(basename "$ARCHIVE")" > "$(basename "$CHECKSUM")"
+  shasum -a 256 "$(basename "$ARCHIVE")" > "$(basename "$ARCHIVE_CHECKSUM")"
 )
 
+sh "$ROOT/scripts/package-dmg.sh" "$APP" "$OUTPUT_DIR" "$ARCH"
+
 echo "release: $ARCHIVE"
-echo "checksum: $CHECKSUM"
+echo "checksum: $ARCHIVE_CHECKSUM"
+echo "dmg: $DMG"
+echo "dmg checksum: $DMG_CHECKSUM"
 echo "version: $VERSION"
 echo "architecture: $ARCH"
 echo "minimum macOS: $MIN_MACOS"

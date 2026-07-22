@@ -32,6 +32,13 @@ the application bundle version.
 - Documented updater network behavior, verification, permissions, and the one-time manual
   upgrade required from versions that predate the in-app installer.
 
+### Packaging
+
+- Added a compressed macOS DMG with the standard drag-to-Applications layout and a
+  separately published SHA-256 checksum.
+- Extended the release script to build and validate ZIP and DMG artifacts from the same
+  signed application bundle.
+
 ## 2.1.10 - 2026-07-22
 
 ### Documentation

@@ -8,7 +8,8 @@ issues but does not accept external pull requests; see [CONTRIBUTING.md](../CONT
 - macOS 13 or newer;
 - Xcode or the Xcode Command Line Tools;
 - Codex Desktop or Codex CLI for live integration testing;
-- the system `sqlite3`, `lsof`, `sips`, `iconutil`, `codesign`, and `qlmanage` tools.
+- the system `sqlite3`, `lsof`, `sips`, `iconutil`, `codesign`, `qlmanage`, and `hdiutil`
+  tools.
 
 No third-party package manager or Swift dependency is required.
 
@@ -46,6 +47,8 @@ sh -n app/build.sh
 sh -n install-app.sh
 sh -n install.sh
 sh -n uninstall.sh
+sh -n scripts/package-dmg.sh
+sh -n scripts/package-release.sh
 sh app/build.sh
 plutil -lint app/Info.plist
 codesign --verify --deep --strict "app/build/Codex Bar.app"
@@ -71,14 +74,15 @@ Then test the built application manually:
 1. Update both version values in `app/Info.plist`.
 2. Move the release notes from `Unreleased` into a dated section in `CHANGELOG.md`.
 3. Run the verification commands and manual test matrix above.
-4. Build the release archive and checksum with `scripts/package-release.sh`.
-5. Confirm the archive architecture, minimum macOS version, signature type, bundled
-   `LICENSE`/`NOTICE`, and checksum are described accurately in the release notes.
-6. Confirm `git status` contains no build output or private session material.
-7. Tag the reviewed commit with the same version prefixed by `v`.
-8. Publish the ZIP and `.sha256` file together, then confirm GitHub reports a `sha256:`
+4. Build the ZIP, DMG, and both checksums with `scripts/package-release.sh`.
+5. Mount the DMG and confirm it contains the signed app and an `/Applications` shortcut.
+6. Confirm both packages' architecture, minimum macOS version, signature type, bundled
+   `LICENSE`/`NOTICE`, and checksums are described accurately in the release notes.
+7. Confirm `git status` contains no build output or private session material.
+8. Tag the reviewed commit with the same version prefixed by `v`.
+9. Publish the ZIP, DMG, and their `.sha256` files, then confirm GitHub reports a `sha256:`
    digest for the ZIP asset and the in-app update check sees the new release.
-9. From the previous version, exercise the complete download, verification, replacement,
+10. From the previous version, exercise the complete download, verification, replacement,
    rollback cleanup, and relaunch path.
 
 ## Design constraints
