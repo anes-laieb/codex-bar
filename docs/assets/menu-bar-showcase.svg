@@ -102,7 +102,7 @@
 
       <text x="429" y="550" class="section">OPEN SESSIONS</text>
       <circle cx="440" cy="578" r="5" fill="#7b98ff"/>
-      <text x="456" y="584" class="menu">codex-bar / Release 2.1.11</text>
+      <text x="456" y="584" class="menu">codex-bar / Release 1.0.0</text>
       <text x="850" y="584" class="shortcut">›</text>
       <circle cx="440" cy="614" r="5" fill="#66c98c"/>
       <text x="456" y="620" class="menu">codex-bar / Polish docs</text>

@@ -67,6 +67,8 @@ Then test the built application manually:
   the writable-installation error path;
 - updater rejection of an incorrect archive digest, bundle identifier, version,
   architecture, or code signature;
+- minimum-width window resizing with long session titles and metadata constrained to
+  their own rows;
 - Light and Dark appearances at standard and Retina display scales.
 
 ## Release checklist
