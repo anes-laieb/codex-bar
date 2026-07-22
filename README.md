@@ -18,15 +18,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/anes-laieb/codex-bar/issues">🐛 <strong>Issues</strong></a>
+  <a href="https://github.com/anes-laieb/codex-bar/issues"><strong>Issues</strong></a>
   &nbsp;&nbsp;·&nbsp;&nbsp;
-  <a href="CONTRIBUTING.md">🤝 <strong>Contribution policy</strong></a>
+  <a href="CONTRIBUTING.md"><strong>Contribution policy</strong></a>
   &nbsp;&nbsp;·&nbsp;&nbsp;
-  <a href="SECURITY.md">🔒 <strong>Security</strong></a>
+  <a href="SECURITY.md"><strong>Security</strong></a>
   &nbsp;&nbsp;·&nbsp;&nbsp;
-  <a href="SUPPORT.md">💬 <strong>Support</strong></a>
+  <a href="SUPPORT.md"><strong>Support</strong></a>
   &nbsp;&nbsp;·&nbsp;&nbsp;
-  <a href="CODE_OF_CONDUCT.md">🫶 <strong>Conduct</strong></a>
+  <a href="CODE_OF_CONDUCT.md"><strong>Conduct</strong></a>
 </p>
 
 <p align="center">
@@ -42,11 +42,10 @@
 </p>
 
 > [!NOTE]
-> The hero is a product illustration. The menu-bar walkthrough is rendered from the real
-> 1.0.0 UI structure with demo-safe data; the window preview comes from the real app with
-> private task titles replaced before publication.
+> The hero is a product illustration. The product preview below is a real application
+> capture with private task titles replaced before publication.
 
-## ✨ Your Codex control center
+## Your Codex control center
 
 <table>
   <tr>
@@ -56,11 +55,16 @@
   </tr>
 </table>
 
-## 🖥️ The menu bar in action
+## The product in action
 
 <p align="center">
-  <img src="docs/assets/menu-bar-showcase.svg" width="100%" alt="Codex Bar idle state, working state with timer and activity text, and the detailed open menu with Quick Preferences">
+  <img src="docs/assets/app-window.png" width="760" alt="Real Codex Bar application capture showing live sessions, recent activity, and preferences">
 </p>
+
+The capture above is taken from the native app at its documented size and then tightly
+cropped for the README. It shows the live session list, working indicator, recent activity,
+and the preferences that control the menu-bar experience. The status artwork below is the
+same artwork shipped in the app, including the real working animation.
 
 | Moment | What Codex Bar shows |
 | --- | --- |
@@ -69,13 +73,7 @@
 | **Needs attention** | A sky-blue indicator, `Check Codex`, and a pending-task count when more than one task needs you. |
 | **Menu open** | Live sessions, exact-task controls, weekly usage, New Chat, recent activity, hidden sessions, Quick Preferences, updates, and app controls. Animation and timers continue while the menu is open. |
 
-## 🪟 The full sessions window
-
-<p align="center">
-  <img src="docs/assets/app-window.png" width="760" alt="Codex Bar sessions window showing active tasks, recent activity, and preferences">
-</p>
-
-### ✦ Designed around the way agents actually work
+### Designed around the way agents actually work
 
 - **Multiple active sessions**, sorted by what needs attention first.
 - **Pin, mute, hide, and restore** controls for individual tasks.
@@ -89,13 +87,14 @@
 - **No daemon and no Codex configuration edits.** The native app only reads Codex's
   local thread index and rollout logs.
 
-### 🎨 Choose your icon color
+### Icon colors and working state
 
 <table>
   <tr>
-    <td align="center" bgcolor="#0d1117" width="33%"><img src="app/StatusAssets/app-logo.png" width="86" alt="Codex Bar Default appearance"><br><strong>Default</strong><br><sub>Branded full-color idle artwork</sub></td>
-    <td align="center" bgcolor="#0d1117" width="33%"><img src="app/StatusAssets/codex-logo.svg" width="86" alt="Codex Bar System appearance"><br><strong>System</strong><br><sub>Follows macOS light/dark contrast</sub></td>
-    <td align="center" bgcolor="#0d1117" width="33%"><img src="app/StatusAssets/colored-idle.png" width="86" alt="Codex Bar Sky Blue appearance"><br><strong>Sky Blue</strong><br><sub>Color-forward idle and working states</sub></td>
+    <td align="center" bgcolor="#0d1117" width="25%"><img src="app/StatusAssets/app-logo.png" width="86" alt="Codex Bar Default appearance"><br><strong>Default</strong><br><sub>Branded full-color idle artwork</sub></td>
+    <td align="center" bgcolor="#0d1117" width="25%"><img src="app/StatusAssets/codex-logo.svg" width="86" alt="Codex Bar System appearance"><br><strong>System</strong><br><sub>Follows macOS light/dark contrast</sub></td>
+    <td align="center" bgcolor="#0d1117" width="25%"><img src="app/StatusAssets/colored-idle.png" width="86" alt="Codex Bar Sky Blue appearance"><br><strong>Sky Blue</strong><br><sub>Color-forward idle and working states</sub></td>
+    <td align="center" bgcolor="#0d1117" width="25%"><img src="app/StatusAssets/codex-animation.gif" width="86" alt="Codex Bar working animation"><br><strong>Working</strong><br><sub>Animated active-task indicator</sub></td>
   </tr>
 </table>
 
@@ -103,7 +102,7 @@
 light and dark menu bars. Switch instantly from **Preferences → Icon color** or the
 menu-bar **Quick Preferences** submenu.
 
-## 📦 Install
+## Install
 
 ### Download the app
 
@@ -136,7 +135,7 @@ run `xcode-select --install` once). macOS 13+.
 
 That's it. No Homebrew or extra apps are required.
 
-## 🎛️ Using it
+## Using it
 
 | Menu-bar state | Meaning |
 | --- | --- |
@@ -154,7 +153,7 @@ That's it. No Homebrew or extra apps are required.
 
 Quit it from its menu (or the window), then drag **`/Applications/Codex Bar.app`** to the Trash. Nothing else is left behind.
 
-## ⚙️ How it works
+## How it works
 
 Codex writes a JSON log for every session under `~/.codex/sessions/**/rollout-*.jsonl`.
 Codex Bar finds the rollout files currently held open by Codex, matches them to Codex's
@@ -176,7 +175,7 @@ across Codex versions. Tested against `codex-cli 0.144.2`.
 > If a future Codex release changes these events, please [open an issue](https://github.com/anes-laieb/codex-bar/issues/new/choose)
 > with the Codex version, the behavior you observed, and safe reproduction details.
 
-## 🧩 Advanced: SwiftBar/xbar plugin (optional)
+## Advanced: SwiftBar/xbar plugin (optional)
 
 Prefer to render through [SwiftBar](https://github.com/swiftbar/SwiftBar) instead of a
 standalone app? There's a plugin path that uses a small background watcher + a SwiftBar
@@ -188,14 +187,14 @@ and preserving any existing hook.
 
 ---
 
-## ✅ Requirements
+## Requirements
 
 - **macOS 13+**
 - **Swift toolchain** (Xcode or `xcode-select --install`), only needed to build.
 - **Codex CLI or Codex Desktop**, which Codex Bar watches.
 - The macOS-provided `lsof` and `sqlite3` command-line tools.
 
-## 🔒 Privacy and network access
+## Privacy and network access
 
 Session discovery and status processing happen locally. Codex Bar reads Codex's local
 thread database and rollout logs, and stores its own preferences and recent-activity
@@ -208,7 +207,7 @@ then validates the extracted bundle identifier, version, architecture, and code 
 No session content is included in either request. You can disable automatic metadata
 checks in **Quick Preferences**.
 
-## ⚠️ Known limitations
+## Known limitations
 
 - **Full menu bar:** Codex Bar is a normal menu-bar item; if your menu bar is packed
   (e.g. a notched Mac), macOS may hide it. Reveal it by ⌘-dragging items apart or with a
@@ -219,7 +218,7 @@ checks in **Quick Preferences**.
   Codex Bar from replacing its installed app bundle, it preserves the current version and
   offers the GitHub release as a manual fallback.
 
-## 🗂️ Repository layout
+## Repository layout
 
 ```
 codex-bar/
@@ -240,14 +239,14 @@ codex-bar/
 For implementation details, see [Architecture](docs/ARCHITECTURE.md). For local build
 and verification guidance, see [Development](docs/DEVELOPMENT.md).
 
-## 💬 Project policy and support
+## Project policy and support
 
 Issues are open for bug reports and feature requests. The project is **not accepting
 code or documentation contributions at this time**, so please do not open pull requests.
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before participating, [SUPPORT.md](SUPPORT.md)
 for help channels, and [SECURITY.md](SECURITY.md) for private vulnerability reports.
 
-## 📄 License
+## License
 
 [Apache-2.0](LICENSE) © the Codex Bar contributors. An independent, community project,
 not affiliated with or endorsed by OpenAI; see [NOTICE](NOTICE).
