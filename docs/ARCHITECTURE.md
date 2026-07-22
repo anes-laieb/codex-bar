@@ -68,5 +68,9 @@ only after the new version launches. It never requests administrator credentials
 an ad-hoc signature. `install-app.sh` selects `/Applications` or `~/Applications`, removes
 an older local installation, copies the new bundle, and launches it.
 
+`scripts/package-release.sh` builds the signed bundle once and emits both release formats:
+the ZIP consumed by the verified in-app updater and a compressed DMG with the conventional
+drag-to-Applications layout. Each artifact is published with its own SHA-256 checksum.
+
 The legacy SwiftBar path under `bin/`, `plugins/`, and `tools/` is separate from the
 native app. Users should run only one path at a time.

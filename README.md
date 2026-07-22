@@ -107,13 +107,15 @@ menu-bar **Quick Preferences** submenu.
 
 ### Download the app
 
-Download the Apple silicon build and its checksum from the
-[latest GitHub release](../../releases/latest), verify it, unzip it, and move
-**Codex Bar.app** into `/Applications`.
+Download the Apple silicon DMG and its checksum from the
+[latest GitHub release](../../releases/latest), then verify it:
 
 ```sh
-shasum -a 256 -c Codex-Bar-2.1.11-macOS-arm64.zip.sha256
+shasum -a 256 -c Codex-Bar-2.1.11-macOS-arm64.dmg.sha256
 ```
+
+Open the DMG and drag **Codex Bar.app** onto the **Applications** shortcut. The ZIP remains
+available for the in-app updater and for anyone who prefers a manual archive.
 
 The downloadable build is ad-hoc signed and is not Apple-notarized. On first launch,
 macOS may ask you to confirm it through **Control-click → Open**. The release notes state
