@@ -1246,7 +1246,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
                              .foregroundColor: NSColor.secondaryLabelColor]))
             return value
         }())
-        name.lineBreakMode = .byTruncatingMiddle
+        name.lineBreakMode = .byTruncatingTail
+        name.maximumNumberOfLines = 1
+        name.usesSingleLineMode = true
+        name.cell?.wraps = false
+        name.cell?.truncatesLastVisibleLine = true
+        name.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        name.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         name.translatesAutoresizingMaskIntoConstraints = false
 
         var details = [session.state == .working ? activityText() : stateLabel(session.state)]
@@ -1263,6 +1269,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         subtitle.textColor = .tertiaryLabelColor
         subtitle.font = .systemFont(ofSize: 11)
         subtitle.lineBreakMode = .byTruncatingTail
+        subtitle.maximumNumberOfLines = 1
+        subtitle.usesSingleLineMode = true
+        subtitle.cell?.wraps = false
+        subtitle.cell?.truncatesLastVisibleLine = true
+        subtitle.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        subtitle.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         subtitle.translatesAutoresizingMaskIntoConstraints = false
 
         let muted = preferenceSet("mutedSessionIDs").contains(session.id)

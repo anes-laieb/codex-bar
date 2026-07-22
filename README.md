@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Release 2.1.11" src="https://img.shields.io/badge/release-v2.1.11-60a5fa?style=flat-square"></a>
+  <a href="../../releases/latest"><img alt="Release 1.0.0" src="https://img.shields.io/badge/release-v1.0.0-60a5fa?style=flat-square"></a>
   <img alt="macOS 13 or newer" src="https://img.shields.io/badge/macOS-13%2B-111827?style=flat-square&logo=apple&logoColor=white">
   <img alt="Native Swift" src="https://img.shields.io/badge/native-Swift-f97316?style=flat-square&logo=swift&logoColor=white">
   <a href="LICENSE"><img alt="Apache 2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-22c55e?style=flat-square"></a>
@@ -43,7 +43,7 @@
 
 > [!NOTE]
 > The hero is a product illustration. The menu-bar walkthrough is rendered from the real
-> 2.1.11 UI structure with demo-safe data; the window preview comes from the real app with
+> 1.0.0 UI structure with demo-safe data; the window preview comes from the real app with
 > private task titles replaced before publication.
 
 ## ✨ Your Codex control center
@@ -111,7 +111,7 @@ Download the Apple silicon DMG and its checksum from the
 [latest GitHub release](../../releases/latest), then verify it:
 
 ```sh
-shasum -a 256 -c Codex-Bar-2.1.11-macOS-arm64.dmg.sha256
+shasum -a 256 -c Codex-Bar-1.0.0-macOS-arm64.dmg.sha256
 ```
 
 Open the DMG and drag **Codex Bar.app** onto the **Applications** shortcut. The ZIP remains
@@ -120,11 +120,6 @@ available for the in-app updater and for anyone who prefers a manual archive.
 The downloadable build is ad-hoc signed and is not Apple-notarized. On first launch,
 macOS may ask you to confirm it through **Control-click → Open**. The release notes state
 the exact architecture, minimum macOS version, signature, checksum, and source commit.
-
-> [!IMPORTANT]
-> Versions 2.1.10 and earlier open GitHub when an update is available. Install 2.1.11
-> manually once; after that, clicking **Update Available** downloads, verifies, installs,
-> and relaunches Codex Bar directly.
 
 ### Build from source
 
