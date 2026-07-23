@@ -767,8 +767,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
-        window.minSize = NSSize(width: 600, height: 700)
+        window.minSize = NSSize(width: 560, height: 700)
+        // Cap the width to the intended layout so the window can never open
+        // (or be dragged) absurdly wide; height stays free to grow.
+        window.maxSize = NSSize(width: 680, height: 2000)
         window.isReleasedWhenClosed = false
+        // Don't let AppKit restore a stale, oversized frame from a previous
+        // session — the window should always open at its designed size.
+        window.isRestorable = false
         window.hasShadow = false
 
         let content = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 680, height: 790))
@@ -1391,7 +1397,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate,
             let sessionName = liveSession?.sessionName ?? entry.sessionName
             let label = NSTextField(labelWithString: "\(projectName) / \(sessionName)")
             label.font = .systemFont(ofSize: 11, weight: .medium)
-            label.lineBreakMode = .byTruncatingMiddle
+            label.lineBreakMode = .byTruncatingTail
+            label.maximumNumberOfLines = 1
+            label.usesSingleLineMode = true
+            label.cell?.wraps = false
+            label.cell?.truncatesLastVisibleLine = true
+            // Yield horizontally so the title truncates to fit the window
+            // instead of forcing the card (and window) wider.
+            label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             let date = NSTextField(labelWithString: formatter.localizedString(for: entry.date, relativeTo: Date()))
             date.font = .systemFont(ofSize: 10)
             date.textColor = .tertiaryLabelColor
